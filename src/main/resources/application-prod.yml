@@ -10,6 +10,7 @@ blog:
     notify-mail: ${BLOG_COMMENT_NOTIFY_MAIL:false}
     owner-email: ${BLOG_COMMENT_OWNER_EMAIL:}
     from-email: ${BLOG_COMMENT_FROM_EMAIL:}
+    post-interval-seconds: ${BLOG_COMMENT_POST_INTERVAL_SECONDS:10}
   jwt:
     # 生产环境缺失该变量则启动失败
     secret: ${BLOG_JWT_SECRET}

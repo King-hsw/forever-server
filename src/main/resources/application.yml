@@ -24,5 +24,8 @@ blog:
   comment:
     auto-approve: true
     notify-mail: false
+    # 同 IP 发评最小间隔（秒），默认 10；仅作为初始默认值，
+    # 后台可通过 PUT /api/admin/settings 实时调整（存 sys_site_config，重启不丢）
+    post-interval-seconds: 10
     # owner-email: you@example.com   # 新根评论通知站长（需 notify-mail: true）
     # from-email: noreply@example.com

@@ -8,6 +8,7 @@ import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.config.BlogProperties;
 import com.forever.server.sensitive.SensitiveWordService;
+import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
@@ -25,12 +26,13 @@ import java.util.stream.Collectors;
 @Service
 public class CommentService {
 
-    /** 同 IP 发评间隔（毫秒） */
-    private static final long POST_INTERVAL_MS = 60_000;
+    /** 同 IP 发评最小间隔（秒），可通过 blog.comment.post-interval-seconds 覆盖 */
+    private static final long DEFAULT_POST_INTERVAL_SECONDS = 10;
 
     private final CommentMapper commentMapper;
     private final ArticleMapper articleMapper;
     private final SensitiveWordService sensitiveWordService;
+    private final SiteConfigService siteConfig;
     private final ApplicationEventPublisher events;
     private final BlogProperties props;
     /** IP -> 上次发评时间，简单内存限流（单实例够用） */
@@ -39,11 +41,13 @@ public class CommentService {
     public CommentService(CommentMapper commentMapper,
                           ArticleMapper articleMapper,
                           SensitiveWordService sensitiveWordService,
+                          SiteConfigService siteConfig,
                           ApplicationEventPublisher events,
                           BlogProperties props) {
         this.commentMapper = commentMapper;
         this.articleMapper = articleMapper;
         this.sensitiveWordService = sensitiveWordService;
+        this.siteConfig = siteConfig;
         this.events = events;
         this.props = props;
     }
@@ -152,15 +156,31 @@ public class CommentService {
     // ---------- internal ----------
 
     private void throttle(String ip) {
+        long intervalMs = postIntervalMs();
+        if (intervalMs <= 0) {
+            return; // 0 = 不限流
+        }
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime last = lastPostByIp.put(ip, now);
-        if (last != null && last.isAfter(now.minusNanos(POST_INTERVAL_MS * 1_000_000))) {
+        LocalDateTime last = lastPostByIp.get(ip);
+        if (last != null && last.isAfter(now.minusNanos(intervalMs * 1_000_000))) {
             throw new BizException(ErrorCode.CONFLICT, "评论太频繁，请稍后再试");
         }
+        // 通过校验才记录本次时间，避免被拒请求反复刷新窗口导致一直发不出去
+        lastPostByIp.put(ip, now);
         // 防止 map 无限增长
         if (lastPostByIp.size() > 10_000) {
             lastPostByIp.entrySet().removeIf(e -> e.getValue().isBefore(now.minusHours(1)));
         }
+    }
+
+    /**
+     * 生效间隔：后台站点设置（sys_site_config，控制台可实时改）优先，
+     * 未设置时回落 application.yml 的 blog.comment.post-interval-seconds，再兜底默认值。
+     */
+    private long postIntervalMs() {
+        Long yml = props.comment() == null ? null : props.comment().postIntervalSeconds();
+        long fallback = (yml == null || yml < 0) ? DEFAULT_POST_INTERVAL_SECONDS : yml;
+        return Math.max(0, siteConfig.getLong(SiteConfigService.COMMENT_POST_INTERVAL_SECONDS, fallback)) * 1000;
     }
 
     private Comment requireVisible(Long id) {

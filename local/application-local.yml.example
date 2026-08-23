@@ -29,5 +29,6 @@ blog:
   comment:
     auto-approve: true      # false=先审后显
     notify-mail: false      # 回复邮件通知（开启需配置 spring.mail.smtp 等）
+    post-interval-seconds: 10  # 同 IP 发评最小间隔（秒），0=不限
     # owner-email: you@example.com
     # from-email: noreply@example.com

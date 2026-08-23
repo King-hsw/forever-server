@@ -31,10 +31,11 @@ public record BlogProperties(Jwt jwt, Admin admin, Upload upload, Cors cors, Sit
     public record Site(String url) {
     }
 
-    /** 评论策略：是否直接过审、邮件通知开关与发件人 */
+    /** 评论策略：是否直接过审、邮件通知开关与发件人、同 IP 发评最小间隔秒数 */
     public record Comment(boolean autoApprove,
                           boolean notifyMail,
                           String ownerEmail,
-                          String fromEmail) {
+                          String fromEmail,
+                          Long postIntervalSeconds) {
     }
 }

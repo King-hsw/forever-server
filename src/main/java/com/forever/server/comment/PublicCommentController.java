@@ -35,7 +35,7 @@ public class PublicCommentController {
     }
 
     @Operation(summary = "发表评论", description = """
-            访客评论，同一 IP 限每分钟 1 条；内容命中敏感词会被自动打码。
+            访客评论，同一 IP 限每 10 秒 1 条（可配 blog.comment.post-interval-seconds）；内容命中敏感词会被自动打码。
             parentId 不传为发根评论，传则为回复（root 自动归组）。
             是否先审后显由后台 blog.comment.auto-approve 配置决定。""")
     @PostMapping("/api/v1/comments")
