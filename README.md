@@ -57,7 +57,6 @@ mvn spring-boot:run
 | `BLOG_JWT_SECRET` | JWT 密钥（缺失则启动失败） |
 | `BLOG_ADMIN_PASSWORD` | 初始管理员密码（仅首次启动建号用） |
 | `BLOG_UPLOAD_DIR` | 上传目录 |
-| `BLOG_CORS_ORIGINS` | CORS 白名单 |
 
 激活方式：`--spring.profiles.active=prod`。
 
@@ -65,4 +64,4 @@ mvn spring-boot:run
 
 - 数据库变更一律走 Flyway 迁移脚本（`src/main/resources/db/migration/`），禁止手改已合并的脚本
 - 本地日志输出到 `logs/forever-server.log`（已在 .gitignore 中）
-- 定时任务（RSS 抓取）间隔可通过 `blog.rss.fetch-interval-ms` 等配置覆盖
+- 定时任务（RSS 抓取）默认每 6 小时一次，可通过 `blog.rss.fetch-interval-ms` 等配置覆盖
