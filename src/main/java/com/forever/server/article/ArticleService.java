@@ -48,7 +48,7 @@ public class ArticleService {
         validateCategory(request.categoryId());
         validateTags(request.tagIds());
         Article article = new Article();
-        applyRequest(article, request, resolveNewSlug(request.slug()));
+        applyRequest(article, request, resolveNewSlug(request.slug(), request.title()));
         article.setStatus(ArticleStatus.DRAFT);
         articleMapper.insert(article);
         saveRelations(article.getId(), request.tagIds());
@@ -178,16 +178,17 @@ public class ArticleService {
         return existing != null ? existing : fallback;
     }
 
-    private String resolveNewSlug(String requested) {
+    private String resolveNewSlug(String requested, String title) {
         if (requested != null && !requested.isBlank()) {
             if (articleMapper.existsBySlug(requested) > 0) {
                 throw new BizException(ErrorCode.CONFLICT, "slug 已被使用");
             }
             return requested;
         }
-        // 自动生成：时间戳 + 6 位随机串，冲突重试
+        // 自动生成：优先从标题提取语义化 slug（SEO 友好），冲突时追加随机后缀重试
+        String base = SlugGenerator.fromTitle(title);
         for (int i = 0; i < 3; i++) {
-            String candidate = SlugGenerator.randomSlug();
+            String candidate = i == 0 ? base : base + "-" + SlugGenerator.randomSlug();
             if (articleMapper.existsBySlug(candidate) == 0) {
                 return candidate;
             }

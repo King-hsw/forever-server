@@ -15,7 +15,8 @@ public record ArticleSaveRequest(
         @NotBlank(message = "正文不能为空") String content,
         @Schema(description = "摘要；不填则发布阶段自动截取正文前 120 字")
         @Size(max = 500) String summary,
-        @Schema(description = "URL 别名，供前台 /articles/{slug} 使用；不填服务端自动生成", example = "spring-boot-4")
+        @Schema(description = "URL 别名，供前台 /articles/{slug} 使用；不填时自动从标题提取语义化 slug" +
+                "（如标题 Docker 部署 Spring Boot → docker-spring-boot），纯中文/纯符号标题回退随机串", example = "spring-boot-4")
         @Size(max = 200) String slug,
         @Schema(description = "封面图 URL")
         @Size(max = 500) String coverImage,
