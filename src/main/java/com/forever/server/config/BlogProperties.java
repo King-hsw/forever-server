@@ -5,11 +5,14 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.util.List;
 
 /**
- * blog.* 配置项。dev 使用 application.yml 默认值；
+ * 启动期必要配置（blog.*）。仅保留应用启动或基础设施层面必需的项：
+ * JWT 密钥、初始管理员、上传目录、CORS 白名单；dev 用 application.yml，
  * prod 必须通过环境变量覆盖（见 application-prod.yml）。
+ * 业务运行参数（评论策略、站点地址等）已迁至后台「站点设置」
+ * （sys_site_config 表，PUT /api/admin/settings 实时调整），不再走 yml。
  */
 @ConfigurationProperties(prefix = "blog")
-public record BlogProperties(Jwt jwt, Admin admin, Upload upload, Cors cors, Site site, Comment comment) {
+public record BlogProperties(Jwt jwt, Admin admin, Upload upload, Cors cors) {
 
     /** HS256 密钥（≥32 字节）与 token 有效期 */
     public record Jwt(String secret, long expireHours) {
@@ -25,17 +28,5 @@ public record BlogProperties(Jwt jwt, Admin admin, Upload upload, Cors cors, Sit
 
     /** CORS 白名单，供已有前端跨域调用 */
     public record Cors(List<String> allowedOrigins) {
-    }
-
-    /** 站点对外地址，用于生成 RSS feed 等绝对链接 */
-    public record Site(String url) {
-    }
-
-    /** 评论策略：是否直接过审、邮件通知开关与发件人、同 IP 发评最小间隔秒数 */
-    public record Comment(boolean autoApprove,
-                          boolean notifyMail,
-                          String ownerEmail,
-                          String fromEmail,
-                          Long postIntervalSeconds) {
     }
 }

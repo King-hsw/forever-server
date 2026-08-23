@@ -5,7 +5,7 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.SlugGenerator;
-import com.forever.server.config.BlogProperties;
+import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -25,20 +25,20 @@ public class ArticleService {
     private final CategoryMapper categoryMapper;
     private final com.forever.server.tag.TagMapper tagMapper;
     private final ApplicationEventPublisher events;
-    private final BlogProperties props;
+    private final SiteConfigService siteConfig;
 
     public ArticleService(ArticleMapper articleMapper,
                           ArticleTagMapper articleTagMapper,
                           CategoryMapper categoryMapper,
                           com.forever.server.tag.TagMapper tagMapper,
                           ApplicationEventPublisher events,
-                          BlogProperties props) {
+                          SiteConfigService siteConfig) {
         this.articleMapper = articleMapper;
         this.articleTagMapper = articleTagMapper;
         this.categoryMapper = categoryMapper;
         this.tagMapper = tagMapper;
         this.events = events;
-        this.props = props;
+        this.siteConfig = siteConfig;
     }
 
     // ---------- 管理端 ----------
@@ -240,12 +240,12 @@ public class ArticleService {
                 a.getContent() == null ? null : ArticleResponse.estimateReadingTime(a.getContent()));
     }
 
-    /** 前台完整 URL，供机器消费方直接使用；未配置 blog.site.url 时返回 null */
+    /** 前台完整 URL，供机器消费方直接使用；后台未配置站点地址时返回 null */
     private String publicUrl(String slug) {
-        if (props.site() == null || props.site().url() == null || props.site().url().isBlank()) {
+        String base = siteConfig.getString(SiteConfigService.SITE_URL, null);
+        if (base == null || base.isBlank()) {
             return null;
         }
-        String base = props.site().url();
         return (base.endsWith("/") ? base.substring(0, base.length() - 1) : base) + "/articles/" + slug;
     }
 }

@@ -7,7 +7,7 @@
 - 文章管理：草稿/发布、slug、标签多对多、分类、软删除、独立页面（type=PAGE，如“关于”）
 - 内容格式：正文带 content_format（MARKDOWN/HTML），Core 只存取不渲染
 - 领域事件：文章发布/下线/软删、新评论发出 Spring 事件，扩展能力（搜索索引、AI、通知）通过 @EventListener 接入，不侵入主流程
-- 机器友好 API：文章响应含 url（基于 blog.site.url 拼接）与 readingTime 预估阅读时长
+- 机器友好 API：文章响应含 url（基于后台站点设置 site.url 拼接，见 /api/admin/settings）与 readingTime 预估阅读时长
 - RSS 订阅：维护订阅源，定时抓取友博文章聚合展示；本站 RSS 仅含 ARTICLE 类型
 - 友链申请与审核
 - 认证：JWT（HS256），登录后访问 `/api/admin/**`；登录成败入审计日志

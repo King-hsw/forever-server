@@ -19,10 +19,25 @@ public class SiteConfigService {
 
     /** 同 IP 发表评论的最小间隔（秒），0 表示不限流 */
     public static final String COMMENT_POST_INTERVAL_SECONDS = "comment.post-interval-seconds";
+    /** 新评论是否直接过审（false = 先审后显） */
+    public static final String COMMENT_AUTO_APPROVE = "comment.auto-approve";
+    /** 是否开启回复邮件通知（需另行配置 spring.mail.* 基础设施） */
+    public static final String COMMENT_NOTIFY_MAIL = "comment.notify-mail";
+    /** 新根评论通知站长的邮箱 */
+    public static final String COMMENT_OWNER_EMAIL = "comment.owner-email";
+    /** 通知邮件的发件人地址 */
+    public static final String COMMENT_FROM_EMAIL = "comment.from-email";
+    /** 站点对外地址，用于拼接文章前台链接与 RSS */
+    public static final String SITE_URL = "site.url";
 
     /** 已知配置项元数据：key -> 中文说明（新增可调参数在这里登记） */
     private static final Map<String, String> KNOWN_KEYS = Map.of(
-            COMMENT_POST_INTERVAL_SECONDS, "同一 IP 发表评论的最小间隔（秒），0 表示不限流");
+            COMMENT_POST_INTERVAL_SECONDS, "同一 IP 发表评论的最小间隔（秒），0 表示不限流",
+            COMMENT_AUTO_APPROVE, "新评论是否直接过审，false = 先审后显（true/false）",
+            COMMENT_NOTIFY_MAIL, "是否开启评论邮件通知（true/false，需已配置 spring.mail.*）",
+            COMMENT_OWNER_EMAIL, "新根评论通知站长的邮箱",
+            COMMENT_FROM_EMAIL, "通知邮件的发件人地址",
+            SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）");
 
     private final SiteConfigMapper mapper;
     /** key -> 当前生效值的内存缓存 */
@@ -34,8 +49,7 @@ public class SiteConfigService {
     }
 
     /**
-     * 读取 long 型配置：数据库值优先；未设置或非法时回落 fallback
-     * （fallback 通常传 application.yml 中的默认值）。
+     * 读取 long 型配置：数据库值优先；未设置或非法时回落 fallback。
      */
     public long getLong(String key, long fallback) {
         String value = cache.get(key);
@@ -50,6 +64,28 @@ public class SiteConfigService {
         }
     }
 
+    /** 读取 boolean 配置：未设置或非法时回落 fallback */
+    public boolean getBoolean(String key, boolean fallback) {
+        String value = cache.get(key);
+        if (value == null || value.isBlank()) {
+            return fallback;
+        }
+        if ("true".equalsIgnoreCase(value.trim())) {
+            return true;
+        }
+        if ("false".equalsIgnoreCase(value.trim())) {
+            return false;
+        }
+        log.warn("site config {}={} is not a boolean, fallback to {}", key, value, fallback);
+        return fallback;
+    }
+
+    /** 读取字符串配置：未设置时回落 fallback（可能为 null） */
+    public String getString(String key, String fallback) {
+        String value = cache.get(key);
+        return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
     public List<SettingDtos.SettingResponse> listAll() {
         return KNOWN_KEYS.entrySet().stream()
                 .map(e -> new SettingDtos.SettingResponse(e.getKey(), cache.get(e.getKey()), e.getValue()))
@@ -60,17 +96,31 @@ public class SiteConfigService {
         if (!KNOWN_KEYS.containsKey(key)) {
             throw new BizException(ErrorCode.BAD_REQUEST, "未知的配置项：" + key);
         }
-        try {
-            if (Long.parseLong(value.trim()) < 0) {
-                throw new BizException(ErrorCode.BAD_REQUEST, "配置值不能为负数");
+        String trimmed = value.trim();
+        if (key.equals(COMMENT_POST_INTERVAL_SECONDS)) {
+            try {
+                if (Long.parseLong(trimmed) < 0) {
+                    throw new BizException(ErrorCode.BAD_REQUEST, "配置值不能为负数");
+                }
+            } catch (NumberFormatException e) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "配置值必须为整数");
             }
-        } catch (NumberFormatException e) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "配置值必须为整数");
+        } else if (key.equals(COMMENT_AUTO_APPROVE) || key.equals(COMMENT_NOTIFY_MAIL)) {
+            if (!"true".equalsIgnoreCase(trimmed) && !"false".equalsIgnoreCase(trimmed)) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "布尔型配置只接受 true/false");
+            }
+            trimmed = trimmed.toLowerCase();
+        } else if ((key.equals(COMMENT_OWNER_EMAIL) || key.equals(COMMENT_FROM_EMAIL))
+                && !trimmed.isEmpty()
+                && !trimmed.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "邮箱格式不正确");
+        } else if (key.equals(SITE_URL) && !trimmed.isEmpty() && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "站点地址必须以 http:// 或 https:// 开头");
         }
 
-        mapper.upsert(key, value.trim());
-        cache.put(key, value.trim());
-        log.info("site config updated: {}={}", key, value.trim());
-        return new SettingDtos.SettingResponse(key, value.trim(), KNOWN_KEYS.get(key));
+        mapper.upsert(key, trimmed);
+        cache.put(key, trimmed);
+        log.info("site config updated: {}={}", key, trimmed);
+        return new SettingDtos.SettingResponse(key, trimmed, KNOWN_KEYS.get(key));
     }
 }

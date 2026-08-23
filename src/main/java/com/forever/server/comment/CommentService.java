@@ -34,7 +34,6 @@ public class CommentService {
     private final SensitiveWordService sensitiveWordService;
     private final SiteConfigService siteConfig;
     private final ApplicationEventPublisher events;
-    private final BlogProperties props;
     /** IP -> 上次发评时间，简单内存限流（单实例够用） */
     private final Map<String, LocalDateTime> lastPostByIp = new ConcurrentHashMap<>();
 
@@ -42,14 +41,12 @@ public class CommentService {
                           ArticleMapper articleMapper,
                           SensitiveWordService sensitiveWordService,
                           SiteConfigService siteConfig,
-                          ApplicationEventPublisher events,
-                          BlogProperties props) {
+                          ApplicationEventPublisher events) {
         this.commentMapper = commentMapper;
         this.articleMapper = articleMapper;
         this.sensitiveWordService = sensitiveWordService;
         this.siteConfig = siteConfig;
         this.events = events;
-        this.props = props;
     }
 
     // ---------- 公开端 ----------
@@ -111,7 +108,7 @@ public class CommentService {
         comment.setSite(blankToNull(request.site()));
         comment.setContent(sensitiveWordService.mask(request.content().trim()));
 
-        boolean autoApprove = props.comment() == null || props.comment().autoApprove();
+        boolean autoApprove = siteConfig.getBoolean(SiteConfigService.COMMENT_AUTO_APPROVE, true);
         comment.setStatus(autoApprove ? "APPROVED" : "PENDING");
         comment.setIp(ip);
 
@@ -173,14 +170,10 @@ public class CommentService {
         }
     }
 
-    /**
-     * 生效间隔：后台站点设置（sys_site_config，控制台可实时改）优先，
-     * 未设置时回落 application.yml 的 blog.comment.post-interval-seconds，再兜底默认值。
-     */
+    /** 生效间隔：后台站点设置优先，未设置时用内置默认值；0 表示不限流 */
     private long postIntervalMs() {
-        Long yml = props.comment() == null ? null : props.comment().postIntervalSeconds();
-        long fallback = (yml == null || yml < 0) ? DEFAULT_POST_INTERVAL_SECONDS : yml;
-        return Math.max(0, siteConfig.getLong(SiteConfigService.COMMENT_POST_INTERVAL_SECONDS, fallback)) * 1000;
+        return Math.max(0, siteConfig.getLong(
+                SiteConfigService.COMMENT_POST_INTERVAL_SECONDS, DEFAULT_POST_INTERVAL_SECONDS)) * 1000;
     }
 
     private Comment requireVisible(Long id) {

@@ -2,7 +2,7 @@ package com.forever.server.rss;
 
 import com.forever.server.article.Article;
 import com.forever.server.article.ArticleMapper;
-import com.forever.server.config.BlogProperties;
+import com.forever.server.setting.SiteConfigService;
 import com.rometools.rome.feed.synd.SyndContentImpl;
 import com.rometools.rome.feed.synd.SyndEntryImpl;
 import com.rometools.rome.feed.synd.SyndFeedImpl;
@@ -31,18 +31,18 @@ public class SiteFeedController {
     private static final int FEED_SIZE = 20;
 
     private final ArticleMapper articleMapper;
-    private final BlogProperties props;
+    private final SiteConfigService siteConfig;
 
-    public SiteFeedController(ArticleMapper articleMapper, BlogProperties props) {
+    public SiteFeedController(ArticleMapper articleMapper, SiteConfigService siteConfig) {
         this.articleMapper = articleMapper;
-        this.props = props;
+        this.siteConfig = siteConfig;
     }
 
     @Operation(summary = "本站 RSS 订阅源", description = "RSS 2.0 格式，返回最新 20 篇已发布文章；" +
-            "文章链接基于 blog.site.url 配置拼接")
+            "文章链接基于后台站点设置 site.url 拼接")
     @GetMapping(value = "/rss", produces = MediaType.APPLICATION_RSS_XML_VALUE)
     public ResponseEntity<String> rss() throws com.rometools.rome.io.FeedException {
-        String siteUrl = trimTrailingSlash(props.site().url());
+        String siteUrl = trimTrailingSlash(siteConfig.getString(SiteConfigService.SITE_URL, ""));
 
         SyndFeed feed = new SyndFeedImpl();
         feed.setFeedType("rss_2.0");

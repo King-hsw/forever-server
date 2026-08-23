@@ -22,13 +22,6 @@ blog:
   cors:
     allowed-origins:
       - http://localhost:5173
-  site:
-    # 对外访问地址（RSS feed 的文章链接基于它拼接）
-    url: http://localhost:5173
 
-  comment:
-    auto-approve: true      # false=先审后显
-    notify-mail: false      # 回复邮件通知（开启需配置 spring.mail.smtp 等）
-    post-interval-seconds: 10  # 同 IP 发评最小间隔（秒），0=不限
-    # owner-email: you@example.com
-    # from-email: noreply@example.com
+# 注意：评论策略（限流间隔/先审后显/邮件通知/收件人）与站点地址等运行参数不在 yml 配置，
+# 启动后登录后台调用 PUT /api/admin/settings 调整（存 sys_site_config 表，重启不丢）

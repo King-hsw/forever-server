@@ -1,6 +1,6 @@
 package com.forever.server.comment;
 
-import com.forever.server.config.BlogProperties;
+import com.forever.server.setting.SiteConfigService;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
@@ -20,11 +20,11 @@ import org.springframework.stereotype.Service;
 public class CommentNotifyService {
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
-    private final BlogProperties props;
+    private final SiteConfigService siteConfig;
 
-    public CommentNotifyService(ObjectProvider<JavaMailSender> mailSenderProvider, BlogProperties props) {
+    public CommentNotifyService(ObjectProvider<JavaMailSender> mailSenderProvider, SiteConfigService siteConfig) {
         this.mailSenderProvider = mailSenderProvider;
-        this.props = props;
+        this.siteConfig = siteConfig;
     }
 
     /**
@@ -59,11 +59,11 @@ public class CommentNotifyService {
     }
 
     private boolean enabled() {
-        return props.comment() != null && props.comment().notifyMail();
+        return siteConfig.getBoolean(SiteConfigService.COMMENT_NOTIFY_MAIL, false);
     }
 
     private String ownerEmail() {
-        return props.comment().ownerEmail();
+        return siteConfig.getString(SiteConfigService.COMMENT_OWNER_EMAIL, null);
     }
 
     private String buildReplyBody(Comment parent, Comment reply, String articleTitle) {
@@ -88,7 +88,8 @@ public class CommentNotifyService {
         helper.setTo(to);
         helper.setSubject(subject);
         helper.setText(text);
-        helper.setFrom(new InternetAddress(props.comment().fromEmail(), "补陋阁"));
+        helper.setFrom(new InternetAddress(siteConfig.getString(SiteConfigService.COMMENT_FROM_EMAIL,
+                "noreply@example.com"), "补陋阁"));
         sender.send(message);
         log.info("comment notify mail sent: to={}, subject={}", to, subject);
     }
