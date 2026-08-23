@@ -58,6 +58,31 @@ public class FriendLinkService {
         return mapper.findAll().stream().map(FriendLinkResponse::adminView).toList();
     }
 
+    /** 管理端主动创建友链：无需审核，创建即通过 */
+    @Transactional
+    public FriendLinkResponse create(FriendLinkApplyRequest request) {
+        String siteUrl = checkUrlFormat(request.siteUrl(), "站点地址");
+        if (request.iconUrl() != null && !request.iconUrl().isBlank()) {
+            checkUrlFormat(request.iconUrl(), "图标地址");
+        }
+        String normalized = normalize(siteUrl);
+        if (mapper.countBySiteUrl(normalized) > 0) {
+            throw new BizException(ErrorCode.CONFLICT, "该站点地址已存在");
+        }
+
+        FriendLink link = new FriendLink();
+        link.setName(request.name().trim());
+        link.setSiteUrl(normalized);
+        link.setIconUrl(blankToNull(request.iconUrl()));
+        link.setDescription(blankToNull(request.description()));
+        link.setContact(blankToNull(request.contact()));
+        link.setStatus(FriendLinkStatus.APPROVED);
+        link.setReviewedAt(LocalDateTime.now());
+        mapper.insert(link);
+        log.info("friend link created by admin: id={}, name={}, siteUrl={}", link.getId(), link.getName(), link.getSiteUrl());
+        return FriendLinkResponse.adminView(mapper.findById(link.getId()));
+    }
+
     @Transactional
     public FriendLinkResponse update(Long id, FriendLinkUpdateRequest request) {
         FriendLink exists = requireExists(id);

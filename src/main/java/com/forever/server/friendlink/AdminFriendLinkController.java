@@ -33,6 +33,12 @@ public class AdminFriendLinkController {
         return ApiResponse.ok(service.listAll());
     }
 
+    @Operation(summary = "创建友链", description = "管理端直接录入友链，无需审核，创建即在前台展示")
+    @PostMapping
+    public ApiResponse<FriendLinkResponse> create(@Valid @RequestBody FriendLinkApplyRequest request) {
+        return ApiResponse.ok(service.create(request));
+    }
+
     @Operation(summary = "更新友链", description = "全量更新：未传的字段会被置空")
     @PutMapping("/{id}")
     public ApiResponse<FriendLinkResponse> update(@PathVariable Long id,
