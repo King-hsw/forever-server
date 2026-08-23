@@ -1,0 +1,24 @@
+# 本地开发私密配置模板
+# 复制本文件为 local/application-local.yml 并填入真实值；
+# local/ 已被 .gitignore 排除，真实配置严禁提交。
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/forever
+    username: postgres
+    password: <数据库密码>
+
+blog:
+  jwt:
+    # HS256 密钥，要求 >= 32 字节；可用: openssl rand -base64 48
+    secret: <至少32字节的随机字符串>
+    expire-hours: 24
+  admin:
+    username: admin
+    # 仅在 sys_user 表为空时用于初始化管理员
+    password: <管理员初始密码>
+  upload:
+    base-dir: ./uploads
+  cors:
+    allowed-origins:
+      - http://localhost:5173

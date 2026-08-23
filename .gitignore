@@ -1,0 +1,19 @@
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.idea/
+*.iml
+.DS_Store
+uploads/
+logs/
+
+# 设计文档仅本地保留，不入仓
+docs/
+
+# 本地私密配置（数据库账密 / JWT 密钥 / 管理员密码），严禁提交
+# 仅放行 .example 模板供新环境参考
+local/*
+!local/application-local.yml.example
+.env
+*.local.yml

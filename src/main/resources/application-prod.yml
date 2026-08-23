@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+
+blog:
+  jwt:
+    # 生产环境缺失该变量则启动失败
+    secret: ${BLOG_JWT_SECRET}
+    expire-hours: ${BLOG_JWT_EXPIRE_HOURS:24}
+  admin:
+    username: ${BLOG_ADMIN_USERNAME:admin}
+    # 生产环境密码不落盘，由 AdminInitializer 首次启动时读取（缺失则初始化失败）
+    password: ${BLOG_ADMIN_PASSWORD}
+  upload:
+    base-dir: ${BLOG_UPLOAD_DIR}
+  cors:
+    allowed-origins: ${BLOG_CORS_ORIGINS}
+
+logging:
+  # 路径供 logback-spring.xml 中的 springProperty 读取；滚动策略在 XML 中维护
+  file:
+    name: logs/forever-server.log
