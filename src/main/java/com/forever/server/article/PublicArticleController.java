@@ -5,6 +5,7 @@ import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,6 +33,12 @@ public class PublicArticleController {
             @Parameter(description = "标签 id 过滤") @RequestParam(required = false) Long tagId) {
         return ApiResponse.ok(articleService.pagePublic(
                 page, PageParams.normalizeSize(size), keyword, categoryId, tagId));
+    }
+
+    @Operation(summary = "文章归档", description = "仅返回 PUBLISHED 状态的文章，按发布时间倒序")
+    @GetMapping("/archive")
+    public ApiResponse<List<ArticleArchiveItem>> archive() {
+        return ApiResponse.ok(articleService.listArchive());
     }
 
     @Operation(summary = "文章详情", description = "按 slug 查询；每次访问浏览量 +1")

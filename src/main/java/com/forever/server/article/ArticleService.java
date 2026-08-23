@@ -142,6 +142,13 @@ public class ArticleService {
         return toResponse(article);
     }
 
+    /** 文章归档：仅已发布，按发布时间倒序 */
+    public List<ArticleArchiveItem> listArchive() {
+        return articleMapper.selectArchive().stream()
+                .map(a -> new ArticleArchiveItem(a.getId(), a.getTitle(), a.getSlug(), a.getPublishedAt()))
+                .toList();
+    }
+
     // ---------- internal ----------
 
     Article requireExists(Long id) {

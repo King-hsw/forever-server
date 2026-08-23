@@ -67,6 +67,11 @@ public interface ArticleMapper {
                      @Param("categoryId") Long categoryId,
                      @Param("tagId") Long tagId);
 
+    // ---------- 公开归档：仅已发布，不取重字段 ----------
+    @Select("SELECT id, title, slug, published_at FROM article "
+            + "WHERE status = 'PUBLISHED' AND deleted = false ORDER BY published_at DESC")
+    List<Article> selectArchive();
+
     // ---------- 状态与统计 ----------
     @Update("""
             UPDATE article
