@@ -1,6 +1,5 @@
 package com.forever.server.config;
 
-import com.forever.server.common.ErrorCode;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -59,8 +58,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         // 登录接口
                         .requestMatchers("/api/auth/login").permitAll()
-                        // 前台公开接口（含访客评论的读写）
-                        .requestMatchers("/api/v1/**").permitAll()
+                        // 前台公开接口（含访客评论的读写）与本站 RSS 输出
+                        .requestMatchers("/api/v1/**", "/rss").permitAll()
                         // 上传文件静态访问、健康检查与 API 文档
                         .requestMatchers("/uploads/**", "/actuator/health",
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

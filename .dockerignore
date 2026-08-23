@@ -1,0 +1,17 @@
+# 版本控制与 IDE
+.git
+.gitignore
+.idea
+
+# 构建产物（容器内重新构建）
+target
+
+# 本地私密配置与运行时产物，严禁进镜像
+local
+logs
+
+# 文档与 CI 配置不参与构建
+docs
+README.md
+.dockerignore
+Dockerfile

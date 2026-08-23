@@ -9,7 +9,7 @@ import java.util.List;
  * prod 必须通过环境变量覆盖（见 application-prod.yml）。
  */
 @ConfigurationProperties(prefix = "blog")
-public record BlogProperties(Jwt jwt, Admin admin, Upload upload, Cors cors) {
+public record BlogProperties(Jwt jwt, Admin admin, Upload upload, Cors cors, Site site, Comment comment) {
 
     /** HS256 密钥（≥32 字节）与 token 有效期 */
     public record Jwt(String secret, long expireHours) {
@@ -25,5 +25,16 @@ public record BlogProperties(Jwt jwt, Admin admin, Upload upload, Cors cors) {
 
     /** CORS 白名单，供已有前端跨域调用 */
     public record Cors(List<String> allowedOrigins) {
+    }
+
+    /** 站点对外地址，用于生成 RSS feed 等绝对链接 */
+    public record Site(String url) {
+    }
+
+    /** 评论策略：是否直接过审、邮件通知开关与发件人 */
+    public record Comment(boolean autoApprove,
+                          boolean notifyMail,
+                          String ownerEmail,
+                          String fromEmail) {
     }
 }

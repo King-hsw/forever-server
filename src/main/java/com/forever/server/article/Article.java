@@ -16,6 +16,10 @@ public class Article {
     /** 联表查询带回的分类名，非表字段 */
     private String categoryName;
     private ArticleStatus status;
+    /** 内容类型：文章 / 独立页面 */
+    private ArticleType type;
+    /** 正文存储格式 */
+    private ContentFormat contentFormat;
     private Long viewCount;
     private LocalDateTime publishedAt;
     private LocalDateTime createdAt;
@@ -102,6 +106,22 @@ public class Article {
 
     public void setStatus(ArticleStatus status) {
         this.status = status;
+    }
+
+    public ArticleType getType() {
+        return type;
+    }
+
+    public void setType(ArticleType type) {
+        this.type = type;
+    }
+
+    public ContentFormat getContentFormat() {
+        return contentFormat;
+    }
+
+    public void setContentFormat(ContentFormat contentFormat) {
+        this.contentFormat = contentFormat;
     }
 
     public Long getViewCount() {

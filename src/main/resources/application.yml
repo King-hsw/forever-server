@@ -18,3 +18,11 @@ mybatis:
     map-underscore-to-camel-case: true
 
 # 日志级别与输出在 logback-spring.xml 中统一维护
+
+# 评论策略（可在 local 配置覆盖；notify-mail 开启需另配 spring.mail.*）
+blog:
+  comment:
+    auto-approve: true
+    notify-mail: false
+    # owner-email: you@example.com   # 新根评论通知站长（需 notify-mail: true）
+    # from-email: noreply@example.com

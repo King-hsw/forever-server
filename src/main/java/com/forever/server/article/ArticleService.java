@@ -5,7 +5,9 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.SlugGenerator;
+import com.forever.server.config.BlogProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,15 +24,21 @@ public class ArticleService {
     private final ArticleTagMapper articleTagMapper;
     private final CategoryMapper categoryMapper;
     private final com.forever.server.tag.TagMapper tagMapper;
+    private final ApplicationEventPublisher events;
+    private final BlogProperties props;
 
     public ArticleService(ArticleMapper articleMapper,
                           ArticleTagMapper articleTagMapper,
                           CategoryMapper categoryMapper,
-                          com.forever.server.tag.TagMapper tagMapper) {
+                          com.forever.server.tag.TagMapper tagMapper,
+                          ApplicationEventPublisher events,
+                          BlogProperties props) {
         this.articleMapper = articleMapper;
         this.articleTagMapper = articleTagMapper;
         this.categoryMapper = categoryMapper;
         this.tagMapper = tagMapper;
+        this.events = events;
+        this.props = props;
     }
 
     // ---------- 管理端 ----------
@@ -87,15 +95,18 @@ public class ArticleService {
 
     @Transactional
     public void publish(Long id) {
-        requireExists(id);
+        Article article = requireExists(id);
         articleMapper.publish(id);
+        // 领域事件：搜索/AI/通知等扩展能力通过监听接入，Core 不感知具体订阅者
+        events.publishEvent(new ArticlePublishedEvent(article.getId(), article.getSlug(), article.getTitle()));
         log.info("article published: id={}", id);
     }
 
     @Transactional
     public void unpublish(Long id) {
-        requireExists(id);
+        Article article = requireExists(id);
         articleMapper.unpublish(id);
+        events.publishEvent(new ArticleUnpublishedEvent(article.getId(), article.getSlug()));
         log.info("article unpublished: id={}", id);
     }
 
@@ -103,6 +114,7 @@ public class ArticleService {
     public void delete(Long id) {
         Article article = requireExists(id);
         articleMapper.softDelete(id); // 软删，关联与数据保留
+        events.publishEvent(new ArticleDeletedEvent(article.getId(), article.getSlug()));
         log.info("article soft-deleted: id={}, title={}", id, article.getTitle());
     }
 
@@ -147,6 +159,16 @@ public class ArticleService {
         article.setSummary(request.summary());
         article.setCoverImage(request.coverImage());
         article.setCategoryId(request.categoryId());
+        article.setType(firstNonNull(request.type(), article.getType(), ArticleType.ARTICLE));
+        article.setContentFormat(firstNonNull(request.contentFormat(), article.getContentFormat(), ContentFormat.MARKDOWN));
+    }
+
+    /** 请求值优先；否则保留实体已有值（更新场景）；都没有则用默认值（创建场景） */
+    private static <T> T firstNonNull(T requested, T existing, T fallback) {
+        if (requested != null) {
+            return requested;
+        }
+        return existing != null ? existing : fallback;
     }
 
     private String resolveNewSlug(String requested) {
@@ -211,8 +233,19 @@ public class ArticleService {
         return new ArticleResponse(
                 a.getId(), a.getTitle(), a.getSlug(), a.getSummary(), a.getContent(),
                 a.getCoverImage(), a.getCategoryId(), a.getCategoryName(),
-                a.getTags(), a.getStatus(),
+                a.getTags(), a.getStatus(), a.getType(), a.getContentFormat(),
                 a.getViewCount() == null ? 0 : a.getViewCount(),
-                a.getPublishedAt(), a.getCreatedAt(), a.getUpdatedAt());
+                a.getPublishedAt(), a.getCreatedAt(), a.getUpdatedAt(),
+                publicUrl(a.getSlug()),
+                a.getContent() == null ? null : ArticleResponse.estimateReadingTime(a.getContent()));
+    }
+
+    /** 前台完整 URL，供机器消费方直接使用；未配置 blog.site.url 时返回 null */
+    private String publicUrl(String slug) {
+        if (props.site() == null || props.site().url() == null || props.site().url().isBlank()) {
+            return null;
+        }
+        String base = props.site().url();
+        return (base.endsWith("/") ? base.substring(0, base.length() - 1) : base) + "/articles/" + slug;
     }
 }

@@ -5,6 +5,11 @@ spring:
     password: ${DB_PASSWORD}
 
 blog:
+  comment:
+    auto-approve: ${BLOG_COMMENT_AUTO_APPROVE:true}
+    notify-mail: ${BLOG_COMMENT_NOTIFY_MAIL:false}
+    owner-email: ${BLOG_COMMENT_OWNER_EMAIL:}
+    from-email: ${BLOG_COMMENT_FROM_EMAIL:}
   jwt:
     # 生产环境缺失该变量则启动失败
     secret: ${BLOG_JWT_SECRET}
@@ -17,6 +22,9 @@ blog:
     base-dir: ${BLOG_UPLOAD_DIR}
   cors:
     allowed-origins: ${BLOG_CORS_ORIGINS}
+  site:
+    # 对外地址，用于生成 RSS feed 的文章链接
+    url: ${BLOG_SITE_URL}
 
 logging:
   # 路径供 logback-spring.xml 中的 springProperty 读取；滚动策略在 XML 中维护

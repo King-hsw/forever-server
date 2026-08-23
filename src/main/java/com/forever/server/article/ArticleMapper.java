@@ -14,13 +14,13 @@ public interface ArticleMapper {
 
     String BASE_COLUMNS = """
             a.id, a.title, a.slug, a.summary, a.content, a.cover_image,
-            a.category_id, c.name AS category_name, a.status, a.view_count,
+            a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
             a.published_at, a.created_at, a.updated_at, a.deleted
             """;
 
     @Insert("""
-            INSERT INTO article (title, slug, summary, content, cover_image, category_id, status)
-            VALUES (#{title}, #{slug}, #{summary}, #{content}, #{coverImage}, #{categoryId}, #{status})
+            INSERT INTO article (title, slug, summary, content, cover_image, category_id, status, type, content_format)
+            VALUES (#{title}, #{slug}, #{summary}, #{content}, #{coverImage}, #{categoryId}, #{status}, #{type}, #{contentFormat})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     int insert(Article article);
@@ -28,7 +28,8 @@ public interface ArticleMapper {
     @Update("""
             UPDATE article
             SET title = #{title}, slug = #{slug}, summary = #{summary}, content = #{content},
-                cover_image = #{coverImage}, category_id = #{categoryId}, updated_at = CURRENT_TIMESTAMP
+                cover_image = #{coverImage}, category_id = #{categoryId},
+                type = #{type}, content_format = #{contentFormat}, updated_at = CURRENT_TIMESTAMP
             WHERE id = #{id} AND deleted = false
             """)
     int update(Article article);

@@ -22,3 +22,12 @@ blog:
   cors:
     allowed-origins:
       - http://localhost:5173
+  site:
+    # 对外访问地址（RSS feed 的文章链接基于它拼接）
+    url: http://localhost:5173
+
+  comment:
+    auto-approve: true      # false=先审后显
+    notify-mail: false      # 回复邮件通知（开启需配置 spring.mail.smtp 等）
+    # owner-email: you@example.com
+    # from-email: noreply@example.com

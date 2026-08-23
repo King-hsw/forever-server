@@ -22,5 +22,9 @@ public record ArticleSaveRequest(
         @Schema(description = "分类 id；可不填", example = "1")
         Long categoryId,
         @Schema(description = "标签 id 列表；全量覆盖文章已有标签", example = "[1, 3]")
-        List<Long> tagIds) {
+        List<Long> tagIds,
+        @Schema(description = "内容类型：ARTICLE-文章（默认）/ PAGE-独立页面")
+        ArticleType type,
+        @Schema(description = "正文格式：MARKDOWN（默认）/ HTML")
+        ContentFormat contentFormat) {
 }
