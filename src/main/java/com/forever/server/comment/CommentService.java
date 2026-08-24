@@ -10,7 +10,6 @@ import com.forever.server.config.BlogProperties;
 import com.forever.server.sensitive.SensitiveWordService;
 import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
@@ -36,7 +35,7 @@ public class CommentService {
     private final ArticleMapper articleMapper;
     private final SensitiveWordService sensitiveWordService;
     private final SiteConfigService siteConfig;
-    private final ApplicationEventPublisher events;
+    private final CommentNotifyService notifyService;
     /** IP -> 上次发评时间，简单内存限流（单实例够用） */
     private final Map<String, LocalDateTime> lastPostByIp = new ConcurrentHashMap<>();
 
@@ -44,12 +43,12 @@ public class CommentService {
                           ArticleMapper articleMapper,
                           SensitiveWordService sensitiveWordService,
                           SiteConfigService siteConfig,
-                          ApplicationEventPublisher events) {
+                          CommentNotifyService notifyService) {
         this.commentMapper = commentMapper;
         this.articleMapper = articleMapper;
         this.sensitiveWordService = sensitiveWordService;
         this.siteConfig = siteConfig;
-        this.events = events;
+        this.notifyService = notifyService;
     }
 
     // ---------- 公开端 ----------
@@ -143,8 +142,8 @@ public class CommentService {
         log.info("comment created: id={}, targetType={}, parentId={}, status={}, ip={}",
                 comment.getId(), targetType, comment.getParentId(), comment.getStatus(), ip);
 
-        // 通知等后续动作与评论主流程解耦：监听失败不影响已落库的评论
-        events.publishEvent(new CommentCreatedEvent(comment, parent, sourceTitle));
+        // 通知失败不影响已落库的评论（notify 内部自捕获异常）
+        notifyService.onCommentCreated(comment, parent, sourceTitle);
         return toAdminResponse(comment);
     }
 

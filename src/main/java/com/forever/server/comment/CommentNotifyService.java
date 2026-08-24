@@ -5,13 +5,12 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.context.event.EventListener;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 /**
- * 评论邮件通知（CommentCreatedEvent 的订阅者）。
+ * 评论邮件通知。
  * 设计原则：通知失败绝不影响评论本身——
  * 未开启开关、未配置 SMTP、发送异常都只记日志。
  */
@@ -28,15 +27,11 @@ public class CommentNotifyService {
     }
 
     /**
-     * 监听新评论事件：
+     * 评论落库后的通知：
      * - 回复他人 -> 通知被回复者
      * - 新的根评论 -> 若配置了 blog.comment.owner-email 则通知站长
      */
-    @EventListener
-    public void onCommentCreated(CommentCreatedEvent event) {
-        Comment comment = event.comment();
-        Comment parent = event.parent();
-        String articleTitle = event.articleTitle();
+    public void onCommentCreated(Comment comment, Comment parent, String articleTitle) {
         if (!enabled()) {
             return;
         }

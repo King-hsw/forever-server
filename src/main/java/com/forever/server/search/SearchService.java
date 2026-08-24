@@ -8,7 +8,6 @@ import org.springframework.web.util.HtmlUtils;
 
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -18,7 +17,6 @@ public class SearchService {
     /** 命中位置前后各保留的上下文字符数 */
     private static final int EXCERPT_CONTEXT = 60;
     private static final int EXCERPT_MAX_LENGTH = 120;
-
     private final SearchMapper searchMapper;
     private final ArticleMapper articleMapper;
 
@@ -110,21 +108,18 @@ public class SearchService {
      * Markdown 纯文本化：去掉代码块/图片/链接语法与行内标记，保留可读文字。
      * ponytail: 正则近似去语法，只为搜索摘要服务；要精确渲染请走前端 Markdown 管线。
      */
-    private static final Pattern FENCED_CODE = Pattern.compile("```[\\s\\S]*?```");
-    private static final Pattern IMAGE = Pattern.compile("!\\[[^\\]]*]\\([^)]*\\)");
-    private static final Pattern LINK = Pattern.compile("\\[([^\\]]*)]\\([^)]*\\)");
-    private static final Pattern LINE_MARKS = Pattern.compile("(?m)^\\s{0,3}#{1,6}\\s+|^\\s{0,3}[>*-]\\s+");
-    private static final Pattern INLINE_MARKS = Pattern.compile("[*_`~]");
-
     private static String plainText(String markdown) {
         if (markdown == null || markdown.isBlank()) {
             return "";
         }
-        String text = FENCED_CODE.matcher(markdown).replaceAll(" ");
-        text = IMAGE.matcher(text).replaceAll(" ");
-        text = LINK.matcher(text).replaceAll("$1");
-        text = LINE_MARKS.matcher(text).replaceAll("");
-        return INLINE_MARKS.matcher(text).replaceAll("").replaceAll("\\s+", " ").trim();
+        return markdown
+                .replaceAll("```[\\s\\S]*?```", " ")
+                .replaceAll("!\\[[^\\]]*]\\([^)]*\\)", " ")
+                .replaceAll("\\[([^\\]]*)]\\([^)]*\\)", "$1")
+                .replaceAll("(?m)^\\s{0,3}#{1,6}\\s+|^\\s{0,3}[>*-]\\s+", "")
+                .replaceAll("[*_`~]", "")
+                .replaceAll("\\s+", " ")
+                .trim();
     }
 
     private static int indexOfKeyword(String text, String kw) {
