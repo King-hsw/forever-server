@@ -29,6 +29,8 @@ public class SiteConfigService {
     public static final String COMMENT_FROM_EMAIL = "comment.from-email";
     /** 站点对外地址，用于拼接文章前台链接与 RSS */
     public static final String SITE_URL = "site.url";
+    /** 建站日期（yyyy-MM-dd），前台页脚据此计算运行时长 */
+    public static final String SITE_BIRTH_DATE = "site.birth-date";
     /** 留言板标题 */
     public static final String BOARD_TITLE = "board.title";
     /** 留言板简介 */
@@ -42,6 +44,7 @@ public class SiteConfigService {
             COMMENT_OWNER_EMAIL, "新根评论通知站长的邮箱",
             COMMENT_FROM_EMAIL, "通知邮件的发件人地址",
             SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）",
+            SITE_BIRTH_DATE, "建站日期，格式 yyyy-MM-dd（前台页脚据此计算运行时长）",
             BOARD_TITLE, "留言板标题",
             BOARD_SUMMARY, "留言板简介");
 
@@ -92,6 +95,11 @@ public class SiteConfigService {
         return value == null || value.isBlank() ? fallback : value.trim();
     }
 
+    /** 建站日期；未设置时为 null */
+    public String birthDate() {
+        return getString(SITE_BIRTH_DATE, null);
+    }
+
     public List<SettingDtos.SettingResponse> listAll() {
         return KNOWN_KEYS.entrySet().stream()
                 .map(e -> new SettingDtos.SettingResponse(e.getKey(), cache.get(e.getKey()), e.getValue()))
@@ -132,6 +140,8 @@ public class SiteConfigService {
             throw new BizException(ErrorCode.BAD_REQUEST, "邮箱格式不正确");
         } else if (key.equals(SITE_URL) && !trimmed.isEmpty() && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "站点地址必须以 http:// 或 https:// 开头");
+        } else if (key.equals(SITE_BIRTH_DATE) && !trimmed.isEmpty() && !trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "建站日期格式必须为 yyyy-MM-dd");
         }
 
         mapper.upsert(key, trimmed);
