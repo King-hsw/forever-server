@@ -29,6 +29,10 @@ public class SiteConfigService {
     public static final String COMMENT_FROM_EMAIL = "comment.from-email";
     /** 站点对外地址，用于拼接文章前台链接与 RSS */
     public static final String SITE_URL = "site.url";
+    /** 留言板标题 */
+    public static final String BOARD_TITLE = "board.title";
+    /** 留言板简介 */
+    public static final String BOARD_SUMMARY = "board.summary";
 
     /** 已知配置项元数据：key -> 中文说明（新增可调参数在这里登记） */
     private static final Map<String, String> KNOWN_KEYS = Map.of(
@@ -37,7 +41,9 @@ public class SiteConfigService {
             COMMENT_NOTIFY_MAIL, "是否开启评论邮件通知（true/false，需已配置 spring.mail.*）",
             COMMENT_OWNER_EMAIL, "新根评论通知站长的邮箱",
             COMMENT_FROM_EMAIL, "通知邮件的发件人地址",
-            SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）");
+            SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）",
+            BOARD_TITLE, "留言板标题",
+            BOARD_SUMMARY, "留言板简介");
 
     private final SiteConfigMapper mapper;
     /** key -> 当前生效值的内存缓存 */
@@ -90,6 +96,16 @@ public class SiteConfigService {
         return KNOWN_KEYS.entrySet().stream()
                 .map(e -> new SettingDtos.SettingResponse(e.getKey(), cache.get(e.getKey()), e.getValue()))
                 .toList();
+    }
+
+    /** 留言板标题；未设置时用内置默认值 */
+    public String boardTitle() {
+        return getString(BOARD_TITLE, "留言板");
+    }
+
+    /** 留言板简介；未设置时用内置默认值 */
+    public String boardSummary() {
+        return getString(BOARD_SUMMARY, "对网站有任何建议、想法，或者只是想打个招呼，都欢迎在这里留言。");
     }
 
     public SettingDtos.SettingResponse update(String key, String value) {

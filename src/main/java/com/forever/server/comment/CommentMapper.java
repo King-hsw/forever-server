@@ -14,8 +14,8 @@ import java.util.List;
 public interface CommentMapper {
 
     @Insert("""
-            INSERT INTO comment (article_id, parent_id, root_id, nickname, email, site, content, status, ip)
-            VALUES (#{articleId}, #{parentId}, #{rootId}, #{nickname}, #{email},
+            INSERT INTO comment (target_type, target_id, parent_id, root_id, nickname, email, site, content, status, ip)
+            VALUES (#{targetType}, #{targetId}, #{parentId}, #{rootId}, #{nickname}, #{email},
                     #{site}, #{content}, #{status}, #{ip})
             """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
@@ -27,16 +27,18 @@ public interface CommentMapper {
     // ---------- 公开端：只看已过审 ----------
 
     String ROOT_CONDITION = """
-            WHERE article_id = #{articleId} AND parent_id IS NULL AND status = 'APPROVED'
+            WHERE target_type = #{targetType} AND target_id = #{targetId} AND parent_id IS NULL AND status = 'APPROVED'
             """;
 
     @Select("SELECT * FROM comment " + ROOT_CONDITION + " ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}")
-    List<Comment> pageApprovedRoots(@Param("articleId") Long articleId,
+    List<Comment> pageApprovedRoots(@Param("targetType") String targetType,
+                                    @Param("targetId") long targetId,
                                     @Param("offset") int offset,
                                     @Param("size") int size);
 
     @Select("SELECT COUNT(*) FROM comment " + ROOT_CONDITION)
-    long countApprovedRoots(@Param("articleId") Long articleId);
+    long countApprovedRoots(@Param("targetType") String targetType,
+                            @Param("targetId") long targetId);
 
     @Select("""
             <script>
@@ -55,11 +57,13 @@ public interface CommentMapper {
             SELECT * FROM comment
             <where>
                 <if test='status != null'>status = #{status}</if>
+                <if test='targetType != null'>AND target_type = #{targetType}</if>
             </where>
             ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
             </script>
             """)
     List<Comment> pageAdmin(@Param("status") String status,
+                            @Param("targetType") String targetType,
                             @Param("offset") int offset,
                             @Param("size") int size);
 
@@ -68,10 +72,12 @@ public interface CommentMapper {
             SELECT COUNT(*) FROM comment
             <where>
                 <if test='status != null'>status = #{status}</if>
+                <if test='targetType != null'>AND target_type = #{targetType}</if>
             </where>
             </script>
             """)
-    long countAdmin(@Param("status") String status);
+    long countAdmin(@Param("status") String status,
+                    @Param("targetType") String targetType);
 
     @Update("UPDATE comment SET status = #{status} WHERE id = #{id}")
     int updateStatus(@Param("id") Long id, @Param("status") String status);

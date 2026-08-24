@@ -24,16 +24,19 @@ public class AdminCommentController {
         this.commentService = commentService;
     }
 
-    @Operation(summary = "评论列表", description = "管理端全量可见；status 可选 APPROVED / PENDING / REJECTED，不传查全部")
+    @Operation(summary = "评论列表", description = "管理端全量可见；status 可选 APPROVED / PENDING / REJECTED，targetType 可选 ARTICLE / BOARD，不传查全部")
     @GetMapping
     public ApiResponse<PageResult<CommentAdminResponse>> page(
             @Parameter(description = "状态过滤", example = "PENDING")
             @RequestParam(required = false) String status,
+            @Parameter(description = "归属类型过滤：ARTICLE / BOARD")
+            @RequestParam(required = false) String targetType,
             @Parameter(description = "页码，从 1 开始", example = "1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数（最大 100）", example = "20") @RequestParam(defaultValue = "20") int size) {
         size = Math.min(Math.max(size, 1), 100);
         status = status == null || status.isBlank() ? null : status;
-        return ApiResponse.ok(commentService.pageAdmin(status, page, size));
+        targetType = targetType == null || targetType.isBlank() ? null : targetType;
+        return ApiResponse.ok(commentService.pageAdmin(status, targetType, page, size));
     }
 
     @Operation(summary = "通过审核", description = "PENDING/REJECTED -> APPROVED，前台立即可见")

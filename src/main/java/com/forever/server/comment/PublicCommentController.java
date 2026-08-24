@@ -46,7 +46,7 @@ public class PublicCommentController {
     }
 
     /** 优先取代理转发头，兼容 Nginx 反代部署 */
-    private static String clientIp(HttpServletRequest request) {
+    static String clientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {
             return xff.split(",")[0].trim();

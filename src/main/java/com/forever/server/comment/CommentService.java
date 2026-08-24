@@ -29,6 +29,9 @@ public class CommentService {
     /** 同 IP 发评最小间隔（秒），可通过 blog.comment.post-interval-seconds 覆盖 */
     private static final long DEFAULT_POST_INTERVAL_SECONDS = 10;
 
+    static final String TARGET_ARTICLE = "ARTICLE";
+    static final String TARGET_BOARD = "BOARD";
+
     private final CommentMapper commentMapper;
     private final ArticleMapper articleMapper;
     private final SensitiveWordService sensitiveWordService;
@@ -55,9 +58,18 @@ public class CommentService {
      * 分页取某篇文章的评论，组装成两层楼：根评论倒序，楼内回复正序。
      */
     public PageResult<CommentResponse> pageByArticle(Long articleId, int page, int size) {
+        return pageRoots(TARGET_ARTICLE, articleId, page, size);
+    }
+
+    /** 留言板分页（BOARD 评论全部挂在固定 target_id = 0 上） */
+    public PageResult<CommentResponse> pageByBoard(int page, int size) {
+        return pageRoots(TARGET_BOARD, 0L, page, size);
+    }
+
+    private PageResult<CommentResponse> pageRoots(String targetType, long targetId, int page, int size) {
         int offset = (page - 1) * size;
-        List<Comment> roots = commentMapper.pageApprovedRoots(articleId, offset, size);
-        long total = commentMapper.countApprovedRoots(articleId);
+        List<Comment> roots = commentMapper.pageApprovedRoots(targetType, targetId, offset, size);
+        long total = commentMapper.countApprovedRoots(targetType, targetId);
 
         List<CommentResponse> items;
         if (roots.isEmpty()) {
@@ -82,16 +94,24 @@ public class CommentService {
     }
 
     /**
-     * 发表评论。流程：限流 -> 校验文章 -> 组装层级 -> 敏感词打码 ->
-     * 按 auto-approve 决定状态 -> 落库 -> 发出 CommentCreatedEvent（邮件等由监听者处理）。
+     * 发表文章评论。流程见 {@link #doCreate}。
      */
     public CommentAdminResponse create(CommentCreateRequest request, String ip) {
-        throttle(ip);
-
         Article article = articleMapper.findById(request.articleId());
         if (article == null || article.getStatus() != ArticleStatus.PUBLISHED) {
             throw new BizException(ErrorCode.NOT_FOUND, "文章不存在");
         }
+        return doCreate(TARGET_ARTICLE, request.articleId(), article.getTitle(), request, ip);
+    }
+
+    /** 发表留言板留言（不关联文章） */
+    public CommentAdminResponse createBoard(CommentCreateRequest request, String ip) {
+        return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), request, ip);
+    }
+
+    private CommentAdminResponse doCreate(String targetType, long targetId, String sourceTitle,
+                                          CommentCreateRequest request, String ip) {
+        throttle(ip);
 
         Comment parent = null;
         if (request.parentId() != null) {
@@ -99,7 +119,8 @@ public class CommentService {
         }
 
         Comment comment = new Comment();
-        comment.setArticleId(request.articleId());
+        comment.setTargetType(targetType);
+        comment.setTargetId(targetId);
         comment.setParentId(parent == null ? null : parent.getId());
         comment.setRootId(parent == null ? null
                 : (parent.getRootId() != null ? parent.getRootId() : parent.getId()));
@@ -116,23 +137,23 @@ public class CommentService {
             commentMapper.insert(comment);
         } catch (DataAccessException e) {
             // parent 被并发删除等极端情况，外键冲突兜底为友好错误
-            log.warn("comment insert rejected: articleId={}, reason={}", request.articleId(), e.getMessage());
+            log.warn("comment insert rejected: targetType={}, reason={}", targetType, e.getMessage());
             throw new BizException(ErrorCode.CONFLICT, "评论提交失败，请刷新后重试");
         }
-        log.info("comment created: id={}, articleId={}, parentId={}, status={}, ip={}",
-                comment.getId(), comment.getArticleId(), comment.getParentId(), comment.getStatus(), ip);
+        log.info("comment created: id={}, targetType={}, parentId={}, status={}, ip={}",
+                comment.getId(), targetType, comment.getParentId(), comment.getStatus(), ip);
 
         // 通知等后续动作与评论主流程解耦：监听失败不影响已落库的评论
-        events.publishEvent(new CommentCreatedEvent(comment, parent, article.getTitle()));
+        events.publishEvent(new CommentCreatedEvent(comment, parent, sourceTitle));
         return toAdminResponse(comment);
     }
 
     // ---------- 管理端 ----------
 
-    public PageResult<CommentAdminResponse> pageAdmin(String status, int page, int size) {
+    public PageResult<CommentAdminResponse> pageAdmin(String status, String targetType, int page, int size) {
         int offset = (page - 1) * size;
-        List<Comment> comments = commentMapper.pageAdmin(status, offset, size);
-        long total = commentMapper.countAdmin(status);
+        List<Comment> comments = commentMapper.pageAdmin(status, targetType, offset, size);
+        long total = commentMapper.countAdmin(status, targetType);
         return PageResult.of(comments.stream().map(this::toAdminResponse).toList(), total, page, size);
     }
 
@@ -199,9 +220,14 @@ public class CommentService {
     }
 
     private CommentAdminResponse toAdminResponse(Comment c) {
-        Article article = articleMapper.findById(c.getArticleId());
-        return new CommentAdminResponse(c.getId(), c.getArticleId(),
-                article != null ? article.getTitle() : null,
+        String title;
+        if (TARGET_BOARD.equals(c.getTargetType())) {
+            title = null; // 前端按 targetType 显示「留言板」
+        } else {
+            Article article = articleMapper.findById(c.getTargetId());
+            title = article != null ? article.getTitle() : null;
+        }
+        return new CommentAdminResponse(c.getId(), c.getTargetType(), title,
                 c.getParentId(), c.getRootId(),
                 c.getNickname(), c.getEmail(), c.getSite(), c.getContent(),
                 c.getStatus(), c.getIp(), c.getCreatedAt());

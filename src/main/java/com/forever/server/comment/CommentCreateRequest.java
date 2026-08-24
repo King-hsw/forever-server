@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Size;
 
 @Schema(description = "发表评论请求（访客，无需登录）")
 public record CommentCreateRequest(
-        @Schema(description = "文章 id", example = "1")
+        @Schema(description = "文章 id；仅文章评论需要，留言板留言不传", example = "1")
         Long articleId,
         @Schema(description = "被回复的评论 id；发根评论不传")
         Long parentId,

@@ -46,7 +46,7 @@ public class CommentNotifyService {
             } else if (ownerEmail() != null && !ownerEmail().equalsIgnoreCase(comment.getEmail())) {
                 send(ownerEmail(), "博客有新的评论",
                         """
-                        文章《%s》收到新评论：
+                        《%s》收到新评论：
 
                         昵称：%s
                         内容：%s
@@ -68,7 +68,7 @@ public class CommentNotifyService {
 
     private String buildReplyBody(Comment parent, Comment reply, String articleTitle) {
         return """
-                你在文章《%s》下的评论：
+                你在《%s》下的评论：
 
                   %s
 
