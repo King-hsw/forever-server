@@ -10,7 +10,7 @@ COPY src ./src
 #   - 之后无论改代码还是改 pom，依赖都从缓存卷复用，不再重复下载
 #   - 缓存卷不进入镜像层，不影响最终镜像体积
 # 按 Spring Boot 分层解开 jar，运行镜像按层拷贝以复用缓存
-RUN --mount=type=cache,target=/root/.m2 \
+RUN --mount=type=cache,id=maven-cache,target=/root/.m2 \
     mvn -B -q package -DskipTests \
     && java -Djarmode=tools -jar target/forever-server-*.jar extract --layers --launcher --destination extracted
 
