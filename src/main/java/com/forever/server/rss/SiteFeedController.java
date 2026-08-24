@@ -70,7 +70,7 @@ public class SiteFeedController {
 
         String xml = new SyndFeedOutput().outputString(feed);
         return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(MediaType.APPLICATION_RSS_XML_VALUE))
+                .contentType(MediaType.parseMediaType(MediaType.APPLICATION_RSS_XML_VALUE + ";charset=UTF-8"))
                 .body(xml);
     }
 
