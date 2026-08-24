@@ -1,5 +1,6 @@
 package com.forever.server.config;
 
+import com.forever.server.auth.RbacService;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -9,16 +10,19 @@ import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
 
 import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
+import java.util.stream.Collectors;
 
 @Configuration
 @EnableWebSecurity
@@ -50,6 +54,24 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * JWT -> Authentication：从 RBAC 缓存取用户权限码作为 authorities。
+     * 权限码即 authority 名（如 admin:access），可用 hasAuthority(...) 校验；
+     * 后台调配角色权限后即时生效（缓存随变更失效）。
+     */
+    @Bean
+    public org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
+    jwtAuthenticationConverter(RbacService rbac) {
+        var converter = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter();
+        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
+            long uid = jwt.getClaim("uid");
+            return rbac.permissionsOf(uid).stream()
+                    .map(code -> (GrantedAuthority) () -> code)
+                    .collect(java.util.stream.Collectors.toList());
+        });
+        return converter;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
@@ -63,7 +85,11 @@ public class SecurityConfig {
                         // 上传文件静态访问、健康检查与 API 文档
                         .requestMatchers("/uploads/**", "/actuator/health",
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // 其余（/api/admin/** 等）一律需要认证
+                        // 当前登录人信息：任意登录用户可查
+                        .requestMatchers("/api/admin/me").authenticated()
+                        // 后台其余接口：需 admin:access 权限（RBAC 可配）
+                        .requestMatchers("/api/admin/**").hasAuthority("admin:access")
+                        // 其余一律需要认证
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(rs -> rs.jwt(jwt -> {
                 }))

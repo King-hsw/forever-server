@@ -38,6 +38,10 @@ public class AuthService {
             actionLogService.record(request.username(), "POST", LOGIN_PATH, 401, ip, null);
             throw new BizException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
+        if (!RbacService.STATUS_ACTIVE.equals(user.getStatus())) {
+            actionLogService.record(request.username(), "POST", LOGIN_PATH, 403, ip, null);
+            throw new BizException(ErrorCode.FORBIDDEN, "账号已被禁用");
+        }
         String accessToken = jwtService.issue(user.getId(), user.getUsername());
         actionLogService.record(user.getUsername(), "POST", LOGIN_PATH, HttpStatus.OK.value(), ip, null);
         log.info("login success: uid={}, username={}", user.getId(), user.getUsername());

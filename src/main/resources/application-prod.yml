@@ -22,3 +22,9 @@ logging:
   # 路径供 logback-spring.xml 中的 springProperty 读取；滚动策略在 XML 中维护
   file:
     name: logs/forever-server.log
+
+springdoc:
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
