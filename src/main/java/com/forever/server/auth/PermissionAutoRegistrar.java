@@ -56,7 +56,7 @@ public class PermissionAutoRegistrar implements ApplicationRunner {
     }
 
     private void collect(Perm perm, Method method, Tag tag, Map<String, String[]> out) {
-        if (perm == null || out.containsKey(perm.value())) {
+        if (perm == null || perm.value().isEmpty() || out.containsKey(perm.value())) {
             return;
         }
         String name = perm.name();

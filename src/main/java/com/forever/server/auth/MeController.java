@@ -14,6 +14,7 @@ import java.util.List;
  * 当前登录用户信息：身份来自登录态令牌；角色与权限实时查 RBAC 缓存，
  * 后台调配权限后刷新页面即生效。
  */
+@Perm // 显式声明：仅需登录态
 @Tag(name = "登录用户信息", description = "当前登录用户的身份、角色与权限")
 @RestController
 @RequestMapping("/api/admin")

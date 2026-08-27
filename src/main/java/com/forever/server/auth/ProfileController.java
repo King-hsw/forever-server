@@ -22,6 +22,7 @@ import java.util.Map;
 /**
  * 当前登录用户自己的资料、头像与密码；仅需登录，不受 RBAC 权限码约束。
  */
+@Perm // 显式声明：仅需登录态，不受 RBAC 权限码约束
 @Tag(name = "个人资料", description = "当前登录用户的昵称 / 邮箱 / 主页 / 头像 / 密码")
 @RestController
 @RequestMapping("/api/admin/profile")

@@ -20,6 +20,8 @@ import java.lang.reflect.Method;
  * 从方法/类的 {@link Perm} 解析权限码，与当前请求的 authority 集合比对
  * （authTokenFilter 按 RbacService 权限缓存构建）；未授权抛 AccessDeniedException，
  * GlobalExceptionHandler 统一 403。
+ * <p>
+ * 空 {@code @Perm} 显式表示仅需登录态直接放行；完全未声明 {@code @Perm} 属编码错误，直接拒绝。
  */
 @Component
 public class PermInterceptor implements HandlerInterceptor {
@@ -31,9 +33,12 @@ public class PermInterceptor implements HandlerInterceptor {
         }
         Perm perm = resolve(handlerMethod.getMethod());
         if (perm == null) {
-            return true; // 未声明权限，仅受 URL 级登录校验约束
+            throw new IllegalStateException("missing @Perm declaration: " + request.getRequestURI());
         }
         String code = perm.value();
+        if (code.isEmpty()) {
+            return true; // 显式声明：仅受 URL 级登录校验约束
+        }
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         if (auth != null) {
             for (GrantedAuthority authority : auth.getAuthorities()) {
