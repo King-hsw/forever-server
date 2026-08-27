@@ -13,17 +13,19 @@ public record CommentResponse(
         @Schema(description = "个人主页，可为 null") String site,
         @Schema(description = "内容（敏感词已打码）") String content,
         @Schema(description = "评论时间") LocalDateTime createdAt,
-        @Schema(description = "该评论下的回复，按时间正序") List<CommentResponse> replies) {
+        @Schema(description = "该评论下的回复，按时间正序") List<CommentResponse> replies,
+        @Schema(description = "所回复的楼内回复昵称（仅回复楼内回复时非 null）") String parentNickname,
+        @Schema(description = "所回复的楼内回复内容，前端展示引用") String parentContent) {
 
     /** 根评论（replies 待组装） */
     static CommentResponse root(Comment c, String avatarUrl) {
         return new CommentResponse(c.getId(), c.getNickname(), avatarUrl, c.getSite(),
-                c.getContent(), c.getCreatedAt(), List.of());
+                c.getContent(), c.getCreatedAt(), List.of(), null, null);
     }
 
-    /** 回复（无下级） */
-    static CommentResponse reply(Comment c, String avatarUrl) {
+    /** 回复（无下级）；parentNickname/parentContent 为所回复的楼内回复，回复根评论时为 null */
+    static CommentResponse reply(Comment c, String avatarUrl, String parentNickname, String parentContent) {
         return new CommentResponse(c.getId(), c.getNickname(), avatarUrl, c.getSite(),
-                c.getContent(), c.getCreatedAt(), null);
+                c.getContent(), c.getCreatedAt(), null, parentNickname, parentContent);
     }
 }

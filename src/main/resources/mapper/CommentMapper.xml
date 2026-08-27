@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.comment.CommentMapper">
+
+    <sql id="rootCondition">
+        WHERE target_type = #{targetType} AND target_id = #{targetId} AND parent_id IS NULL AND status = 'APPROVED'
+    </sql>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO comment (target_type, target_id, parent_id, root_id, nickname, email, site, content, status, ip)
+        VALUES (#{targetType}, #{targetId}, #{parentId}, #{rootId}, #{nickname}, #{email},
+                #{site}, #{content}, #{status}, #{ip})
+    </insert>
+
+    <select id="findById" resultType="com.forever.server.comment.Comment">
+        SELECT * FROM comment WHERE id = #{id}
+    </select>
+
+    <select id="findByIds" resultType="com.forever.server.comment.Comment">
+        SELECT * FROM comment WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">#{id}</foreach>
+    </select>
+
+    <!--  公开端：只看已过审  -->
+
+    <select id="pageApprovedRoots" resultType="com.forever.server.comment.Comment">
+        SELECT * FROM comment
+        <include refid="rootCondition"/>
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countApprovedRoots" resultType="long">
+        SELECT COUNT(*) FROM comment
+        <include refid="rootCondition"/>
+    </select>
+
+    <select id="listApprovedReplies" resultType="com.forever.server.comment.Comment">
+        SELECT * FROM comment
+        WHERE status = 'APPROVED' AND root_id IN
+        <foreach collection="rootIds" item="rid" open="(" separator="," close=")">#{rid}</foreach>
+        ORDER BY created_at ASC
+    </select>
+
+    <!--  管理端：全量  -->
+
+    <select id="pageAdmin" resultType="com.forever.server.comment.Comment">
+        SELECT * FROM comment
+        <where>
+            <if test="status != null">status = #{status}</if>
+            <if test="targetType != null">AND target_type = #{targetType}</if>
+        </where>
+        ORDER BY created_at DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countAdmin" resultType="long">
+        SELECT COUNT(*) FROM comment
+        <where>
+            <if test="status != null">status = #{status}</if>
+            <if test="targetType != null">AND target_type = #{targetType}</if>
+        </where>
+    </select>
+
+    <update id="updateStatus">
+        UPDATE comment SET status = #{status} WHERE id = #{id}
+    </update>
+
+    <!-- 删除评论及其楼中所有回复 -->
+    <delete id="deleteWithReplies">
+        DELETE FROM comment WHERE id = #{id} OR root_id = #{id}
+    </delete>
+</mapper>

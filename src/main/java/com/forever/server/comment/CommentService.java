@@ -16,8 +16,11 @@ import org.springframework.util.DigestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -77,15 +80,32 @@ public class CommentService {
             List<Long> rootIds = roots.stream().map(Comment::getId).toList();
             Map<Long, List<Comment>> repliesByRoot = commentMapper.listApprovedReplies(rootIds).stream()
                     .collect(Collectors.groupingBy(Comment::getRootId));
+
+            // 楼内回复再回复楼内回复时，取被回复的父评论供前端展示引用（仅展示已过审的）
+            Set<Long> parentIds = new HashSet<>();
+            repliesByRoot.forEach((rootId, replies) -> replies.stream()
+                    .map(Comment::getParentId)
+                    .filter(pid -> pid != null && !pid.equals(rootId))
+                    .forEach(parentIds::add));
+            Map<Long, Comment> parents = parentIds.isEmpty() ? Map.of()
+                    : commentMapper.findByIds(new ArrayList<>(parentIds)).stream()
+                            .filter(c -> "APPROVED".equals(c.getStatus()))
+                            .collect(Collectors.toMap(Comment::getId, c -> c));
+
             items = roots.stream()
                     .map(root -> {
                         List<CommentResponse> replies = repliesByRoot
                                 .getOrDefault(root.getId(), List.of()).stream()
-                                .map(r -> CommentResponse.reply(r, avatarUrl(r.getEmail())))
+                                .map(r -> {
+                                    Comment p = parents.get(r.getParentId());
+                                    return CommentResponse.reply(r, avatarUrl(r.getEmail()),
+                                            p == null ? null : p.getNickname(),
+                                            p == null ? null : p.getContent());
+                                })
                                 .toList();
                         return new CommentResponse(root.getId(), root.getNickname(),
                                 avatarUrl(root.getEmail()), root.getSite(), root.getContent(),
-                                root.getCreatedAt(), replies);
+                                root.getCreatedAt(), replies, null, null);
                     })
                     .toList();
         }
