@@ -65,4 +65,17 @@
     <delete id="deleteRole">
         DELETE FROM sys_role WHERE id = #{id} AND built_in = false
     </delete>
+
+    <insert id="insertPermissionIfAbsent">
+        INSERT INTO sys_permission (code, name, module)
+        VALUES (#{code}, #{name}, #{module})
+        ON CONFLICT (code) DO NOTHING
+    </insert>
+
+    <insert id="grantAdminByCode">
+        INSERT INTO sys_role_permission (role_id, permission_id)
+        SELECT r.id, p.id FROM sys_role r JOIN sys_permission p ON p.code = #{code}
+        WHERE r.code = 'ADMIN'
+        ON CONFLICT DO NOTHING
+    </insert>
 </mapper>

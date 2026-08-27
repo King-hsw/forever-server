@@ -1,5 +1,6 @@
 package com.forever.server.actionlog;
 
+import com.forever.server.auth.Perm;
 import com.forever.server.common.ApiResponse;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
@@ -7,7 +8,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @Tag(name = "审计日志", description = "后台写操作与登录记录，供安全追溯与排查")
-@PreAuthorize("hasAuthority('log:read')")
 @RestController
 @RequestMapping("/api/admin/logs")
 public class AdminActionLogController {
@@ -26,6 +25,7 @@ public class AdminActionLogController {
         this.actionLogService = actionLogService;
     }
 
+    @Perm("log:list")
     @Operation(summary = "分页查询审计日志", description = "按时间倒序；支持按操作人精确过滤、按路径模糊过滤（如传 articles 可查所有文章相关操作）")
     @GetMapping
     public ApiResponse<PageResult<ActionLogResponse>> page(
