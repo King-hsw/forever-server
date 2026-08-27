@@ -44,7 +44,7 @@
     </select>
 
     <select id="likeCountsByMomentIds" resultType="map">
-        SELECT moment_id AS momentId, COUNT(*) AS likeCount FROM moment_like
+        SELECT moment_id AS "momentId", COUNT(*) AS "likeCount" FROM moment_like
         WHERE moment_id IN
         <foreach collection="momentIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
         GROUP BY moment_id
@@ -66,7 +66,7 @@
     <!--  动态评论数（已过审，target_type = MOMENT）  -->
 
     <select id="commentCountsByMomentIds" resultType="map">
-        SELECT target_id AS momentId, COUNT(*) AS commentCount FROM comment
+        SELECT target_id AS "momentId", COUNT(*) AS "commentCount" FROM comment
         WHERE target_type = 'MOMENT' AND status = 'APPROVED' AND target_id IN
         <foreach collection="momentIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
         GROUP BY target_id

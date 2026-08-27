@@ -13,8 +13,4 @@ public record MomentMedia(
     public MomentMedia {
         images = images == null ? List.of() : List.copyOf(images);
     }
-
-    public boolean isEmpty() {
-        return images.isEmpty() && audio == null && video == null;
-    }
 }

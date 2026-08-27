@@ -103,7 +103,8 @@ public class MomentService {
             return PageResult.of(List.of(), total, page, size);
         }
         List<Long> ids = moments.stream().map(Moment::getId).toList();
-        Map<Long, SysUser> authorById = sysUserMapper.findByIds(ids).stream()
+        List<Long> uids = moments.stream().map(Moment::getUid).distinct().toList();
+        Map<Long, SysUser> authorById = sysUserMapper.findByIds(uids).stream()
                 .collect(Collectors.toMap(SysUser::getId, u -> u));
         Map<Long, Long> likeCountById = momentMapper.likeCountsByMomentIds(ids).stream()
                 .collect(Collectors.toMap(
