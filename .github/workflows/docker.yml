@@ -7,10 +7,6 @@ on:
     tags: ['v*']
   workflow_dispatch:
 
-env:
-  # ghcr 要求镜像名全小写
-  IMAGE: ghcr.io/${{ github.repository }}
-
 jobs:
   build:
     # 每个平台一个 job 并行构建；单平台镜像先按「摘要」推送，
@@ -30,6 +26,10 @@ jobs:
       contents: read
       packages: write
     steps:
+      # ghcr 要求镜像名全小写（owner King-hsw 含大写），统一转换后再用
+      - name: 镜像名转小写
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
@@ -71,6 +71,10 @@ jobs:
       contents: read
       packages: write
     steps:
+      # ghcr 要求镜像名全小写（owner King-hsw 含大写），统一转换后再用
+      - name: 镜像名转小写
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: actions/download-artifact@v4
         with:
           path: /tmp/digests
