@@ -103,7 +103,7 @@ public class CommentService {
                                             p == null ? null : p.getContent());
                                 })
                                 .toList();
-                        return new CommentResponse(root.getId(), root.getNickname(),
+                        return new CommentResponse(root.getId(), null, root.getNickname(),
                                 avatarUrl(root.getEmail()), root.getSite(), root.getContent(),
                                 root.getCreatedAt(), replies, null, null);
                     })
