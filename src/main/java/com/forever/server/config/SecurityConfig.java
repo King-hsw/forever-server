@@ -1,5 +1,6 @@
 package com.forever.server.config;
 
+import com.forever.server.auth.RbacService;
 import com.forever.server.auth.TokenService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -14,6 +15,8 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,6 +30,7 @@ import java.util.List;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
@@ -41,9 +45,9 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /** 登录态过滤器：从 Bearer 头解析双 Token 的 access 侧，构建认证上下文 */
+    /** 登录态过滤器：从 Bearer 头解析双 Token 的 access 侧，权限按 RBAC 权限码授予 */
     @Bean
-    public OncePerRequestFilter authTokenFilter(TokenService tokenService) {
+    public OncePerRequestFilter authTokenFilter(TokenService tokenService, RbacService rbacService) {
         return new OncePerRequestFilter() {
             @Override
             protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
@@ -53,8 +57,11 @@ public class SecurityConfig {
                     try {
                         var principal = tokenService.resolve(header.substring(7).trim());
                         if (principal != null) {
+                            List<GrantedAuthority> authorities = rbacService.permissionsOf(principal.uid()).stream()
+                                    .map(code -> (GrantedAuthority) () -> code)
+                                    .toList();
                             SecurityContextHolder.getContext().setAuthentication(
-                                    new UsernamePasswordAuthenticationToken(principal, null, List.of()));
+                                    new UsernamePasswordAuthenticationToken(principal, null, authorities));
                         }
                     } catch (org.springframework.security.core.AuthenticationException e) {
                         // 用户被删/禁用：按未认证处理，由授权规则决定放行或拒绝
@@ -70,7 +77,7 @@ public class SecurityConfig {
         http
                 .cors(cors -> {
                 })
-                .csrf(csrf -> csrf.disable())
+                .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(sm -> sm.sessionCreationPolicy(
                         org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth

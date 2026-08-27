@@ -8,12 +8,14 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @Tag(name = "站点设置", description = "运行参数后台实时调整，需 JWT 认证；修改落库并即时生效，重启不丢")
+@PreAuthorize("hasAuthority('setting:manage')")
 @RestController
 @RequestMapping("/api/admin/settings")
 @RequiredArgsConstructor

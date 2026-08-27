@@ -10,12 +10,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @Tag(name = "标签管理", description = "管理端标签接口，需 JWT 认证")
+@PreAuthorize("hasAuthority('tag:manage')")
 @RestController
 @RequestMapping("/api/admin/tags")
 public class AdminTagController {

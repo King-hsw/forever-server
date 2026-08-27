@@ -13,11 +13,13 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "文章管理", description = "管理端文章接口，需 JWT 认证；URL 使用数字 id")
+@PreAuthorize("hasAuthority('article:manage')")
 @RestController
 @RequestMapping("/api/admin/articles")
 public class AdminArticleController {

@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.auth.RbacMapper">
+
+    <select id="permissionsByUserId" resultType="com.forever.server.auth.SysPermission">
+        SELECT p.* FROM sys_permission p
+        JOIN sys_role_permission rp ON rp.permission_id = p.id
+        JOIN sys_user_role ur ON ur.role_id = rp.role_id
+        JOIN sys_user u ON u.id = ur.user_id AND u.status = 'ACTIVE'
+        WHERE ur.user_id = #{uid}
+    </select>
+
+    <select id="roleIdsByUserId" resultType="long">
+        SELECT role_id FROM sys_user_role WHERE user_id = #{uid}
+    </select>
+
+    <select id="listRoles" resultType="com.forever.server.auth.SysRole">
+        SELECT * FROM sys_role ORDER BY id
+    </select>
+
+    <select id="findRoleByCode" resultType="com.forever.server.auth.SysRole">
+        SELECT * FROM sys_role WHERE code = #{code}
+    </select>
+
+    <select id="findRoleById" resultType="com.forever.server.auth.SysRole">
+        SELECT * FROM sys_role WHERE id = #{id}
+    </select>
+
+    <select id="permissionIdsByRoleId" resultType="long">
+        SELECT permission_id FROM sys_role_permission WHERE role_id = #{roleId}
+    </select>
+
+    <select id="listPermissions" resultType="com.forever.server.auth.SysPermission">
+        SELECT * FROM sys_permission ORDER BY module, id
+    </select>
+
+    <select id="countUsersWithRole" resultType="long">
+        SELECT COUNT(*) FROM sys_user_role ur
+        JOIN sys_role r ON r.id = ur.role_id AND r.code = #{roleCode}
+    </select>
+
+    <insert id="insertUserRole">
+        INSERT INTO sys_user_role (user_id, role_id) VALUES (#{userId}, #{roleId})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteUserRoles">
+        DELETE FROM sys_user_role WHERE user_id = #{userId}
+    </delete>
+
+    <insert id="insertRolePermission">
+        INSERT INTO sys_role_permission (role_id, permission_id) VALUES (#{roleId}, #{permissionId})
+        ON CONFLICT DO NOTHING
+    </insert>
+
+    <delete id="deleteRolePermissions">
+        DELETE FROM sys_role_permission WHERE role_id = #{roleId}
+    </delete>
+
+    <insert id="insertRole" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sys_role (code, name, remark) VALUES (#{code}, #{name}, #{remark})
+    </insert>
+
+    <delete id="deleteRole">
+        DELETE FROM sys_role WHERE id = #{id} AND built_in = false
+    </delete>
+</mapper>

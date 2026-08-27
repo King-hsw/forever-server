@@ -8,21 +8,33 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 /**
- * 当前登录用户信息：身份来自登录态令牌。
+ * 当前登录用户信息：身份来自登录态令牌；角色与权限实时查 RBAC 缓存，
+ * 后台调配权限后刷新页面即生效。
  */
-@Tag(name = "登录用户信息", description = "当前登录用户的身份")
+@Tag(name = "登录用户信息", description = "当前登录用户的身份、角色与权限")
 @RestController
 @RequestMapping("/api/admin")
 public class MeController {
 
-    public record MeResponse(long uid, String username) {
+    public record MeResponse(long uid, String username, List<String> roles, List<String> permissions) {
     }
 
-    @Operation(summary = "获取当前登录用户信息", description = "uid/用户名来自登录令牌")
+    private final RbacService rbacService;
+
+    public MeController(RbacService rbacService) {
+        this.rbacService = rbacService;
+    }
+
+    @Operation(summary = "获取当前登录用户信息", description = "uid/用户名来自登录令牌；roles/permissions 实时查库（带缓存）")
     @GetMapping("/me")
     public ApiResponse<MeResponse> me(Authentication authentication) {
         AuthPrincipal principal = (AuthPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(new MeResponse(principal.uid(), principal.username()));
+        long uid = principal.uid();
+        return ApiResponse.ok(new MeResponse(uid, principal.username(),
+                rbacService.rolesOf(uid).stream().map(SysRole::getCode).toList(),
+                List.copyOf(rbacService.permissionsOf(uid))));
     }
 }

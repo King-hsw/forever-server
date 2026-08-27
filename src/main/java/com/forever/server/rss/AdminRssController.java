@@ -10,12 +10,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
 @Tag(name = "RSS 订阅管理", description = "管理端订阅源维护接口，需 JWT 认证")
+@PreAuthorize("hasAuthority('rss:manage')")
 @RestController
 @RequestMapping("/api/admin/rss/feeds")
 public class AdminRssController {

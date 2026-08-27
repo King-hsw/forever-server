@@ -21,4 +21,6 @@ public interface SysUserMapper {
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
     int updatePassword(@Param("id") Long id, @Param("password") String password);
+
+    int updateNickname(@Param("id") Long id, @Param("nickname") String nickname);
 }

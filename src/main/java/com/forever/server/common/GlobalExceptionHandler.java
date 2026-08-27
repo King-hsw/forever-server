@@ -3,6 +3,7 @@ package com.forever.server.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -32,6 +33,14 @@ public class GlobalExceptionHandler {
         log.warn("request validation failed: {}", fieldErrors);
         return ResponseEntity.badRequest()
                 .body(ApiResponse.error(ErrorCode.BAD_REQUEST, fieldErrors));
+    }
+
+    /** 方法级权限校验（@PreAuthorize）拒绝：统一 403，不当作服务端错误 */
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    public ResponseEntity<ApiResponse<Void>> handleAuthorizationDenied(AuthorizationDeniedException e) {
+        log.warn("access denied: {}", e.getMessage());
+        return ResponseEntity.status(ErrorCode.FORBIDDEN.httpStatus())
+                .body(ApiResponse.error(ErrorCode.FORBIDDEN));
     }
 
     /** 兜底：记录详情日志，响应不泄露堆栈 */

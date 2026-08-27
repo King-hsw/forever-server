@@ -1,6 +1,6 @@
--- V16 : 按接口模块拆分权限粒度（预留种子数据）
--- 细粒度 RBAC 代码已随审计移除（单管理员账号，/api/admin/** 登录即可进入）；
--- 权限行与角色授予保留，便于日后恢复细粒度权限；admin:access 同样保留历史数据不删。
+-- V16 : 按接口模块拆分权限粒度
+-- 各后台 Controller 通过 @PreAuthorize(hasAuthority('<code>')) 校验模块权限，
+-- 角色在后台「权限管理」按需授予/收回；admin:access 不再作为后台总闸（历史数据保留不删）。
 
 INSERT INTO sys_permission (code, name, module) VALUES
     ('article:manage',      '文章管理',   '内容'),

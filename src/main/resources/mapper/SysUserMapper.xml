@@ -31,4 +31,8 @@
     <update id="updatePassword">
         UPDATE sys_user SET password = #{password} WHERE id = #{id}
     </update>
+
+    <update id="updateNickname">
+        UPDATE sys_user SET nickname = #{nickname} WHERE id = #{id}
+    </update>
 </mapper>
