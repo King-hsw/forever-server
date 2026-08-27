@@ -7,7 +7,6 @@ import com.forever.server.common.PageResult;
 import com.forever.server.common.SlugGenerator;
 import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,20 +23,17 @@ public class ArticleService {
     private final ArticleTagMapper articleTagMapper;
     private final CategoryMapper categoryMapper;
     private final com.forever.server.tag.TagMapper tagMapper;
-    private final ApplicationEventPublisher events;
     private final SiteConfigService siteConfig;
 
     public ArticleService(ArticleMapper articleMapper,
                           ArticleTagMapper articleTagMapper,
                           CategoryMapper categoryMapper,
                           com.forever.server.tag.TagMapper tagMapper,
-                          ApplicationEventPublisher events,
                           SiteConfigService siteConfig) {
         this.articleMapper = articleMapper;
         this.articleTagMapper = articleTagMapper;
         this.categoryMapper = categoryMapper;
         this.tagMapper = tagMapper;
-        this.events = events;
         this.siteConfig = siteConfig;
     }
 
@@ -95,18 +91,15 @@ public class ArticleService {
 
     @Transactional
     public void publish(Long id) {
-        Article article = requireExists(id);
+        requireExists(id);
         articleMapper.publish(id);
-        // 领域事件：搜索/AI/通知等扩展能力通过监听接入，Core 不感知具体订阅者
-        events.publishEvent(new ArticlePublishedEvent(article.getId(), article.getSlug(), article.getTitle()));
         log.info("article published: id={}", id);
     }
 
     @Transactional
     public void unpublish(Long id) {
-        Article article = requireExists(id);
+        requireExists(id);
         articleMapper.unpublish(id);
-        events.publishEvent(new ArticleUnpublishedEvent(article.getId(), article.getSlug()));
         log.info("article unpublished: id={}", id);
     }
 
@@ -114,7 +107,6 @@ public class ArticleService {
     public void delete(Long id) {
         Article article = requireExists(id);
         articleMapper.softDelete(id); // 软删，关联与数据保留
-        events.publishEvent(new ArticleDeletedEvent(article.getId(), article.getSlug()));
         log.info("article soft-deleted: id={}, title={}", id, article.getTitle());
     }
 

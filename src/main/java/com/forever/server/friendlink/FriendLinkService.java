@@ -2,11 +2,11 @@ package com.forever.server.friendlink;
 
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
+import com.forever.server.common.Strings;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -30,9 +30,9 @@ public class FriendLinkService {
     /** 访客提交友链申请 */
     @Transactional
     public FriendLinkResponse apply(FriendLinkApplyRequest request) {
-        String siteUrl = checkUrlFormat(request.siteUrl(), "站点地址");
+        String siteUrl = Strings.checkHttpUrl(request.siteUrl(), "站点地址");
         if (request.iconUrl() != null && !request.iconUrl().isBlank()) {
-            checkUrlFormat(request.iconUrl(), "图标地址");
+            Strings.checkHttpUrl(request.iconUrl(), "图标地址");
         }
         String normalized = normalize(siteUrl);
         if (mapper.countBySiteUrl(normalized) > 0) {
@@ -42,9 +42,9 @@ public class FriendLinkService {
         FriendLink link = new FriendLink();
         link.setName(request.name().trim());
         link.setSiteUrl(normalized);
-        link.setIconUrl(blankToNull(request.iconUrl()));
-        link.setDescription(blankToNull(request.description()));
-        link.setContact(blankToNull(request.contact()));
+        link.setIconUrl(Strings.blankToNull(request.iconUrl()));
+        link.setDescription(Strings.blankToNull(request.description()));
+        link.setContact(Strings.blankToNull(request.contact()));
         link.setStatus(FriendLinkStatus.PENDING);
         mapper.insert(link);
         log.info("friend link applied: id={}, name={}, siteUrl={}", link.getId(), link.getName(), link.getSiteUrl());
@@ -61,9 +61,9 @@ public class FriendLinkService {
     /** 管理端主动创建友链：无需审核，创建即通过 */
     @Transactional
     public FriendLinkResponse create(FriendLinkApplyRequest request) {
-        String siteUrl = checkUrlFormat(request.siteUrl(), "站点地址");
+        String siteUrl = Strings.checkHttpUrl(request.siteUrl(), "站点地址");
         if (request.iconUrl() != null && !request.iconUrl().isBlank()) {
-            checkUrlFormat(request.iconUrl(), "图标地址");
+            Strings.checkHttpUrl(request.iconUrl(), "图标地址");
         }
         String normalized = normalize(siteUrl);
         if (mapper.countBySiteUrl(normalized) > 0) {
@@ -73,9 +73,9 @@ public class FriendLinkService {
         FriendLink link = new FriendLink();
         link.setName(request.name().trim());
         link.setSiteUrl(normalized);
-        link.setIconUrl(blankToNull(request.iconUrl()));
-        link.setDescription(blankToNull(request.description()));
-        link.setContact(blankToNull(request.contact()));
+        link.setIconUrl(Strings.blankToNull(request.iconUrl()));
+        link.setDescription(Strings.blankToNull(request.description()));
+        link.setContact(Strings.blankToNull(request.contact()));
         link.setStatus(FriendLinkStatus.APPROVED);
         link.setReviewedAt(LocalDateTime.now());
         mapper.insert(link);
@@ -86,7 +86,7 @@ public class FriendLinkService {
     @Transactional
     public FriendLinkResponse update(Long id, FriendLinkUpdateRequest request) {
         FriendLink exists = requireExists(id);
-        String siteUrl = normalize(checkUrlFormat(request.siteUrl(), "站点地址"));
+        String siteUrl = normalize(Strings.checkHttpUrl(request.siteUrl(), "站点地址"));
         long dup = mapper.countBySiteUrl(siteUrl);
         // 除自身外不允许重复的站点地址
         boolean duplicated = dup > 1 || (dup == 1 && !normalize(exists.getSiteUrl()).equals(siteUrl));
@@ -97,10 +97,10 @@ public class FriendLinkService {
         FriendLink link = exists;
         link.setName(request.name().trim());
         link.setSiteUrl(siteUrl);
-        link.setIconUrl(blankToNull(request.iconUrl()));
-        link.setDescription(blankToNull(request.description()));
+        link.setIconUrl(Strings.blankToNull(request.iconUrl()));
+        link.setDescription(Strings.blankToNull(request.description()));
         link.setStatus(request.status());
-        link.setRejectReason(request.status() == FriendLinkStatus.REJECTED ? blankToNull(request.rejectReason()) : null);
+        link.setRejectReason(request.status() == FriendLinkStatus.REJECTED ? Strings.blankToNull(request.rejectReason()) : null);
         mapper.update(link);
         log.info("friend link updated: id={}, status={}", id, link.getStatus());
         return FriendLinkResponse.adminView(link);
@@ -117,7 +117,7 @@ public class FriendLinkService {
     @Transactional
     public FriendLinkResponse reject(Long id, String reason) {
         requireExists(id);
-        mapper.reject(id, blankToNull(reason), LocalDateTime.now());
+        mapper.reject(id, Strings.blankToNull(reason), LocalDateTime.now());
         log.info("friend link rejected: id={}", id);
         return FriendLinkResponse.adminView(mapper.findById(id));
     }
@@ -139,29 +139,11 @@ public class FriendLinkService {
         return link;
     }
 
-    /** 校验并返回合法的 http(s) 地址 */
-    private static String checkUrlFormat(String url, String label) {
-        try {
-            URI uri = URI.create(url.trim());
-            String scheme = uri.getScheme();
-            if (!"http".equals(scheme) && !"https".equals(scheme)) {
-                throw new IllegalArgumentException();
-            }
-        } catch (Exception e) {
-            throw new BizException(ErrorCode.BAD_REQUEST, label + "必须是合法的 http(s) 地址");
-        }
-        return url.trim();
-    }
-
     /** 去掉末尾斜杠，避免同一站点因结尾差异重复申请 */
     private static String normalize(String url) {
         String trimmed = url.trim();
         return trimmed.endsWith("/") && trimmed.length() > 1
                 ? trimmed.substring(0, trimmed.length() - 1)
                 : trimmed;
-    }
-
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s.trim();
     }
 }

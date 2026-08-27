@@ -97,4 +97,68 @@
         </foreach>
         ORDER BY at_.article_id, t.id
     </select>
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO article (title, slug, summary, content, cover_image, category_id, status, type, content_format)
+        VALUES (#{title}, #{slug}, #{summary}, #{content}, #{coverImage}, #{categoryId}, #{status}, #{type}, #{contentFormat})
+    </insert>
+
+    <update id="update">
+        UPDATE article
+        SET title = #{title}, slug = #{slug}, summary = #{summary}, content = #{content},
+            cover_image = #{coverImage}, category_id = #{categoryId},
+            type = #{type}, content_format = #{contentFormat}, updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND deleted = false
+    </update>
+
+    <select id="findById" resultMap="articleMap">
+        SELECT a.id, a.title, a.slug, a.summary, a.content, a.cover_image,
+               a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
+               a.published_at, a.created_at, a.updated_at, a.deleted
+        FROM article a LEFT JOIN category c ON c.id = a.category_id
+        WHERE a.id = #{id} AND a.deleted = false
+    </select>
+
+    <select id="findBySlug" resultMap="articleMap">
+        SELECT a.id, a.title, a.slug, a.summary, a.content, a.cover_image,
+               a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
+               a.published_at, a.created_at, a.updated_at, a.deleted
+        FROM article a LEFT JOIN category c ON c.id = a.category_id
+        WHERE a.slug = #{slug} AND a.deleted = false
+    </select>
+
+    <select id="existsBySlug" resultType="long">
+        SELECT COUNT(*) FROM article WHERE slug = #{slug} AND deleted = false
+    </select>
+
+    <!-- 公开归档：仅已发布，不取重字段 -->
+    <select id="selectArchive" resultType="com.forever.server.article.Article">
+        SELECT id, title, slug, published_at FROM article
+        WHERE status = 'PUBLISHED' AND deleted = false ORDER BY published_at DESC
+    </select>
+
+    <update id="publish">
+        UPDATE article
+        SET status = 'PUBLISHED',
+            published_at = COALESCE(published_at, CURRENT_TIMESTAMP),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id} AND deleted = false
+    </update>
+
+    <update id="unpublish">
+        UPDATE article SET status = 'DRAFT', updated_at = CURRENT_TIMESTAMP WHERE id = #{id} AND deleted = false
+    </update>
+
+    <update id="incrementViewCount">
+        UPDATE article SET view_count = view_count + 1 WHERE id = #{id}
+    </update>
+
+    <update id="softDelete">
+        UPDATE article SET deleted = true, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+    </update>
+
+    <!-- 仅更新概要（AI 生成），不动 updated_at：正文未变，仅补充元信息 -->
+    <update id="updateSummary">
+        UPDATE article SET summary = #{summary} WHERE id = #{id}
+    </update>
 </mapper>

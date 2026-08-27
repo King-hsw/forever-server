@@ -6,7 +6,7 @@ import com.forever.server.article.ArticleStatus;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
-import com.forever.server.config.BlogProperties;
+import com.forever.server.common.Strings;
 import com.forever.server.sensitive.SensitiveWordService;
 import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
@@ -145,7 +145,7 @@ public class CommentService {
                 : (parent.getRootId() != null ? parent.getRootId() : parent.getId()));
         comment.setNickname(request.nickname().trim());
         comment.setEmail(request.email().trim());
-        comment.setSite(blankToNull(request.site()));
+        comment.setSite(Strings.blankToNull(request.site()));
         comment.setContent(sensitiveWordService.mask(request.content().trim()));
 
         boolean autoApprove = siteConfig.getBoolean(SiteConfigService.COMMENT_AUTO_APPROVE, true);
@@ -257,9 +257,5 @@ public class CommentService {
         String hash = DigestUtils.md5DigestAsHex(
                 email.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
         return "https://cravatar.cn/avatar/" + hash + "?d=mp&s=80";
-    }
-
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s.trim();
     }
 }

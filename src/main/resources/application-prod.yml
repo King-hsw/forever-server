@@ -5,16 +5,10 @@ spring:
     password: ${DB_PASSWORD}
 
 blog:
-  jwt:
-    # 生产环境缺失该变量则启动失败
-    secret: ${BLOG_JWT_SECRET}
-    expire-hours: ${BLOG_JWT_EXPIRE_HOURS:24}
   admin:
     username: ${BLOG_ADMIN_USERNAME:admin}
     # 生产环境密码不落盘，由 AdminInitializer 首次启动时读取（缺失则初始化失败）
     password: ${BLOG_ADMIN_PASSWORD}
-  upload:
-    base-dir: ${BLOG_UPLOAD_DIR}
 
 # 评论策略、站点地址等运行参数已迁至后台「站点设置」（PUT /api/admin/settings），无需环境变量
 

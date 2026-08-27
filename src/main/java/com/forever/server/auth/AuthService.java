@@ -14,18 +14,18 @@ public class AuthService {
 
     private final SysUserMapper sysUserMapper;
     private final PasswordEncoder passwordEncoder;
-    private final JwtService jwtService;
+    private final TokenService tokenService;
     private final ActionLogService actionLogService;
     /** 登录接口路径，审计日志用 */
     private static final String LOGIN_PATH = "/api/auth/login";
 
     public AuthService(SysUserMapper sysUserMapper,
                        PasswordEncoder passwordEncoder,
-                       JwtService jwtService,
+                       TokenService tokenService,
                        ActionLogService actionLogService) {
         this.sysUserMapper = sysUserMapper;
         this.passwordEncoder = passwordEncoder;
-        this.jwtService = jwtService;
+        this.tokenService = tokenService;
         this.actionLogService = actionLogService;
     }
 
@@ -38,13 +38,13 @@ public class AuthService {
             actionLogService.record(request.username(), "POST", LOGIN_PATH, 401, ip, null);
             throw new BizException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
-        if (!RbacService.STATUS_ACTIVE.equals(user.getStatus())) {
+        if (!"ACTIVE".equals(user.getStatus())) {
             actionLogService.record(request.username(), "POST", LOGIN_PATH, 403, ip, null);
             throw new BizException(ErrorCode.FORBIDDEN, "账号已被禁用");
         }
-        String accessToken = jwtService.issue(user.getId(), user.getUsername());
+        LoginResponse tokens = tokenService.issue(user.getId());
         actionLogService.record(user.getUsername(), "POST", LOGIN_PATH, HttpStatus.OK.value(), ip, null);
         log.info("login success: uid={}, username={}", user.getId(), user.getUsername());
-        return new LoginResponse(accessToken, jwtService.expiresInSeconds());
+        return tokens;
     }
 }

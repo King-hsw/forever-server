@@ -19,15 +19,16 @@ CREATE TABLE sys_permission (
     created_at TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 无外键约束：关联完整性由应用层维护（删角色/用户时手动清理关联）
 CREATE TABLE sys_user_role (
-    user_id BIGINT NOT NULL REFERENCES sys_user (id) ON DELETE CASCADE,
-    role_id BIGINT NOT NULL REFERENCES sys_role (id) ON DELETE CASCADE,
+    user_id BIGINT NOT NULL,
+    role_id BIGINT NOT NULL,
     PRIMARY KEY (user_id, role_id)
 );
 
 CREATE TABLE sys_role_permission (
-    role_id       BIGINT NOT NULL REFERENCES sys_role (id) ON DELETE CASCADE,
-    permission_id BIGINT NOT NULL REFERENCES sys_permission (id) ON DELETE CASCADE,
+    role_id       BIGINT NOT NULL,
+    permission_id BIGINT NOT NULL,
     PRIMARY KEY (role_id, permission_id)
 );
 

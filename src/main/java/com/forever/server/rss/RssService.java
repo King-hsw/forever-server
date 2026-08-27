@@ -3,11 +3,11 @@ package com.forever.server.rss;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
+import com.forever.server.common.Strings;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.net.URI;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -108,27 +108,15 @@ public class RssService {
     }
 
     private void checkUrls(RssFeedRequest request) {
-        checkUrlFormat(request.siteUrl(), "站点地址");
-        checkUrlFormat(request.feedUrl(), "订阅地址");
-    }
-
-    private void checkUrlFormat(String url, String label) {
-        try {
-            URI uri = URI.create(url);
-            String scheme = uri.getScheme();
-            if (!"http".equals(scheme) && !"https".equals(scheme)) {
-                throw new IllegalArgumentException();
-            }
-        } catch (Exception e) {
-            throw new BizException(ErrorCode.BAD_REQUEST, label + "必须是合法的 http(s) 地址");
-        }
+        Strings.checkHttpUrl(request.siteUrl(), "站点地址");
+        Strings.checkHttpUrl(request.feedUrl(), "订阅地址");
     }
 
     private void apply(RssFeed feed, RssFeedRequest request) {
-        feed.setTitle(blankToNull(request.title()));
+        feed.setTitle(Strings.blankToNull(request.title()));
         feed.setSiteUrl(request.siteUrl());
         feed.setFeedUrl(request.feedUrl());
-        feed.setDescription(blankToNull(request.description()));
+        feed.setDescription(Strings.blankToNull(request.description()));
         if (request.enabled() != null) {
             feed.setEnabled(request.enabledOrDefault());
         } else if (feed.getEnabled() == null) {
@@ -151,7 +139,4 @@ public class RssService {
         return counts;
     }
 
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s;
-    }
 }

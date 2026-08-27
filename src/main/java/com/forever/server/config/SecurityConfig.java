@@ -1,28 +1,29 @@
 package com.forever.server.config;
 
-import com.forever.server.auth.RbacService;
+import com.forever.server.auth.TokenService;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.filter.OncePerRequestFilter;
 
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.stream.Collectors;
+import java.util.List;
 
 @Configuration
 @EnableWebSecurity
@@ -36,63 +37,56 @@ public class SecurityConfig {
             "{\"code\":40301,\"message\":\"无权限\",\"data\":null}";
 
     @Bean
-    public SecretKey jwtSecretKey(BlogProperties props) {
-        // HS256 要求密钥 ≥ 256 位（32 字节）
-        return new SecretKeySpec(
-                props.jwt().secret().getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-    }
-
-    @Bean
-    public JwtDecoder jwtDecoder(SecretKey jwtSecretKey) {
-        return NimbusJwtDecoder.withSecretKey(jwtSecretKey)
-                .macAlgorithm(MacAlgorithm.HS256)
-                .build();
-    }
-
-    @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    /**
-     * JWT -> Authentication：从 RBAC 缓存取用户权限码作为 authorities。
-     * 权限码即 authority 名（如 admin:access），可用 hasAuthority(...) 校验；
-     * 后台调配角色权限后即时生效（缓存随变更失效）。
-     */
+    /** 登录态过滤器：从 Bearer 头解析双 Token 的 access 侧，构建认证上下文 */
     @Bean
-    public org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter
-    jwtAuthenticationConverter(RbacService rbac) {
-        var converter = new org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter();
-        converter.setJwtGrantedAuthoritiesConverter(jwt -> {
-            long uid = jwt.getClaim("uid");
-            return rbac.permissionsOf(uid).stream()
-                    .map(code -> (GrantedAuthority) () -> code)
-                    .collect(java.util.stream.Collectors.toList());
-        });
-        return converter;
+    public OncePerRequestFilter authTokenFilter(TokenService tokenService) {
+        return new OncePerRequestFilter() {
+            @Override
+            protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,
+                                            FilterChain chain) throws ServletException, IOException {
+                String header = request.getHeader("Authorization");
+                if (header != null && header.startsWith("Bearer ")) {
+                    try {
+                        var principal = tokenService.resolve(header.substring(7).trim());
+                        if (principal != null) {
+                            SecurityContextHolder.getContext().setAuthentication(
+                                    new UsernamePasswordAuthenticationToken(principal, null, List.of()));
+                        }
+                    } catch (org.springframework.security.core.AuthenticationException e) {
+                        // 用户被删/禁用：按未认证处理，由授权规则决定放行或拒绝
+                    }
+                }
+                chain.doFilter(request, response);
+            }
+        };
     }
 
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, OncePerRequestFilter authTokenFilter) throws Exception {
         http
+                .cors(cors -> {
+                })
                 .csrf(csrf -> csrf.disable())
-                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sm -> sm.sessionCreationPolicy(
+                        org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // 登录接口
-                        .requestMatchers("/api/auth/login").permitAll()
+                        // 登录/换发/登出接口
+                        .requestMatchers("/api/auth/**").permitAll()
                         // 前台公开接口（含访客评论的读写）与本站 RSS 输出
                         .requestMatchers("/api/v1/**", "/rss").permitAll()
-                        // 上传文件静态访问、健康检查与 API 文档
-                        .requestMatchers("/uploads/**", "/actuator/health",
+                        // 健康检查与 API 文档
+                        .requestMatchers("/actuator/health",
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
-                        // 当前登录人信息：任意登录用户可查
-                        .requestMatchers("/api/admin/me").authenticated()
-                        // 后台其余接口：需 admin:access 权限（RBAC 可配）
-                        .requestMatchers("/api/admin/**").hasAuthority("admin:access")
+                        // 后台其余接口：登录即可进入
+                        .requestMatchers("/api/admin/**").authenticated()
                         // 其余一律需要认证
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(rs -> rs.jwt(jwt -> {
-                }))
+                // 双 Token 过滤器替代原 JWT resource server
+                .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
                             log.warn("unauthenticated request rejected: {} {}", req.getMethod(), req.getRequestURI());
@@ -103,6 +97,21 @@ public class SecurityConfig {
                             writeJson(res, HttpServletResponse.SC_FORBIDDEN, FORBIDDEN_BODY);
                         }));
         return http.build();
+    }
+
+    /**
+     * 认证走 Authorization 头（浏览器不会自动携带），非 Cookie，放开来源无风险；
+     * 若改为 Cookie 会话需收敛到白名单。
+     */
+    @Bean
+    public org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource() {
+        var config = new org.springframework.web.cors.CorsConfiguration();
+        config.setAllowedOriginPatterns(java.util.List.of("*"));
+        config.setAllowedMethods(java.util.List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(java.util.List.of("*"));
+        var source = new org.springframework.web.cors.UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 
     private static void writeJson(HttpServletResponse response, int status, String body) {

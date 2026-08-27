@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.search.SearchMapper">
+
+    <sql id="condition">
+        WHERE a.deleted = false AND a.status = 'PUBLISHED' AND a.type = 'ARTICLE'
+          AND (a.title ILIKE '%' || #{kw} || '%'
+               OR a.summary ILIKE '%' || #{kw} || '%'
+               OR a.content ILIKE '%' || #{kw} || '%')
+    </sql>
+
+    <!-- 全文命中行。相关度：标题命中权重最高，摘要次之，正文兜底；
+         word_similarity 由 pg_trgm 提供（V14 迁移启用） -->
+    <select id="page" resultType="com.forever.server.search.SearchMapper$SearchRow">
+        SELECT a.id, a.slug, a.title, a.summary, a.content,
+               c.name AS category_name, a.created_at
+        FROM article a LEFT JOIN category c ON c.id = a.category_id
+        <include refid="condition"/>
+        ORDER BY GREATEST(word_similarity(#{kw}, a.title) * 2,
+                          word_similarity(#{kw}, a.summary),
+                          word_similarity(#{kw}, a.content) * 0.3) DESC,
+                 a.published_at DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="count" resultType="long">
+        SELECT COUNT(*) FROM article a
+        <include refid="condition"/>
+    </select>
+</mapper>

@@ -1,7 +1,9 @@
 package com.forever.server.comment;
 
 import com.forever.server.common.ApiResponse;
+import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
+import com.forever.server.common.Web;
 import com.forever.server.setting.SiteConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -44,7 +46,7 @@ public class BoardController {
     public ApiResponse<PageResult<CommentResponse>> list(
             @Parameter(description = "页码，从 1 开始", example = "1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数（最大 100）", example = "24") @RequestParam(defaultValue = "24") int size) {
-        size = Math.min(Math.max(size, 1), 100);
+        size = PageParams.normalizeSize(size);
         return ApiResponse.ok(commentService.pageByBoard(page, size));
     }
 
@@ -52,6 +54,6 @@ public class BoardController {
     @PostMapping("/api/v1/board/messages")
     public ApiResponse<CommentAdminResponse> create(@Valid @RequestBody CommentCreateRequest request,
                                                     HttpServletRequest httpRequest) {
-        return ApiResponse.ok(commentService.createBoard(request, PublicCommentController.clientIp(httpRequest)));
+        return ApiResponse.ok(commentService.createBoard(request, Web.clientIp(httpRequest)));
     }
 }

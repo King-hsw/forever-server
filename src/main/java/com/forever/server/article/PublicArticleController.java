@@ -1,6 +1,7 @@
 package com.forever.server.article;
 
 import com.forever.server.common.ApiResponse;
+import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;

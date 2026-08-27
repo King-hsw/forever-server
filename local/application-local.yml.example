@@ -9,16 +9,10 @@ spring:
     password: <数据库密码>
 
 blog:
-  jwt:
-    # HS256 密钥，要求 >= 32 字节；可用: openssl rand -base64 48
-    secret: <至少32字节的随机字符串>
-    expire-hours: 24
   admin:
     username: admin
     # 仅在 sys_user 表为空时用于初始化管理员
     password: <管理员初始密码>
-  upload:
-    base-dir: ./uploads
 
 # 注意：评论策略（限流间隔/先审后显/邮件通知/收件人）与站点地址等运行参数不在 yml 配置，
 # 启动后登录后台调用 PUT /api/admin/settings 调整（存 sys_site_config 表，重启不丢）

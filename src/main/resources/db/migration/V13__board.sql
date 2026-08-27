@@ -1,16 +1,8 @@
 -- V13 : 留言板独立于文章
--- comment 增加 target_type（ARTICLE / BOARD），article_id 改名 target_id；
--- 留言板不再是一篇 type=PAGE 的文章，标题/简介放 sys_site_config（board.title / board.summary），
--- 由后台「站点设置」维护；BOARD 评论的 target_id 统一记 0。
+-- 全新安装时 V8 已直接建为目标结构（target_type / target_id，无 article 外键），
+-- 本脚本保留为存量库的迁移路径 + 索引兜底；所有语句幂等。
 
-ALTER TABLE comment DROP CONSTRAINT IF EXISTS comment_article_id_fkey;
-ALTER TABLE comment ADD COLUMN target_type VARCHAR(20) NOT NULL DEFAULT 'ARTICLE';
-ALTER TABLE comment RENAME COLUMN article_id TO target_id;
-
-UPDATE comment SET target_type = 'BOARD', target_id = 0
- WHERE target_id IN (SELECT id FROM article WHERE slug = 'message');
-
-DELETE FROM article WHERE slug = 'message';
+ALTER TABLE comment ADD COLUMN IF NOT EXISTS target_type VARCHAR(20) NOT NULL DEFAULT 'ARTICLE';
 
 DROP INDEX IF EXISTS idx_comment_article;
-CREATE INDEX idx_comment_target ON comment (target_type, target_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_comment_target ON comment (target_type, target_id, created_at);

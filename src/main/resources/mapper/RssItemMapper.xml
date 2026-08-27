@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.rss.RssItemMapper">
+
+    <!-- link 相同的条目只保留第一条，返回插入行数（0 表示已存在） -->
+    <insert id="insertIgnore">
+        INSERT INTO rss_item (feed_id, link, title, summary, published_at)
+        VALUES (#{feedId}, #{link}, #{title}, #{summary}, #{publishedAt})
+        ON CONFLICT (feed_id, link) DO NOTHING
+    </insert>
+
+    <!-- 联表投影行：含来源站点信息，供公开列表直接展示 -->
+    <select id="pageLatest" resultType="com.forever.server.rss.RssItemMapper$ItemRow">
+        SELECT i.id, i.feed_id, f.title AS feed_title, f.site_url,
+               i.title, i.link, i.summary, i.published_at, i.created_at
+        FROM rss_item i
+        JOIN rss_feed f ON f.id = i.feed_id AND f.enabled = TRUE
+        ORDER BY i.published_at DESC NULLS LAST, i.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countLatest" resultType="long">
+        SELECT COUNT(*)
+        FROM rss_item i
+        JOIN rss_feed f ON f.id = i.feed_id AND f.enabled = TRUE
+    </select>
+
+    <select id="countByFeedId" resultType="long">
+        SELECT COUNT(*) FROM rss_item WHERE feed_id = #{feedId}
+    </select>
+
+    <delete id="deleteByFeedId">
+        DELETE FROM rss_item WHERE feed_id = #{feedId}
+    </delete>
+</mapper>

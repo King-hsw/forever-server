@@ -60,9 +60,8 @@ public class TagService {
     }
 
     private void checkNameUnique(String name, Long excludeId) {
-        boolean duplicated = listAll().stream()
-                .anyMatch(t -> t.name().equals(name) && !t.id().equals(excludeId));
-        if (duplicated) {
+        long count = tagMapper.countByName(name);
+        if (excludeId == null ? count > 0 : count > 1) {
             throw new BizException(ErrorCode.CONFLICT, "标签名称已存在");
         }
     }

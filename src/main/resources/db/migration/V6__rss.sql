@@ -16,7 +16,7 @@ CREATE TABLE rss_feed (
 
 CREATE TABLE rss_item (
     id           BIGSERIAL PRIMARY KEY,
-    feed_id      BIGINT       NOT NULL REFERENCES rss_feed (id) ON DELETE CASCADE,
+    feed_id      BIGINT       NOT NULL,       -- 逻辑关联 rss_feed.id，无外键；删除源时应用层同步删条目
     link         VARCHAR(500) NOT NULL,
     title        VARCHAR(500) NOT NULL,
     summary      VARCHAR(1000),

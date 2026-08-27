@@ -71,11 +71,8 @@ public class CategoryService {
     }
 
     private void checkNameUnique(String name, Long excludeId) {
-        // 重名校验：除自身外不允许同名（简单起见全表比对，个人博客数据量可忽略）
-        List<CategoryResponse> all = listAll();
-        boolean duplicated = all.stream()
-                .anyMatch(c -> c.name().equals(name) && !c.id().equals(excludeId));
-        if (duplicated) {
+        long count = categoryMapper.countByName(name);
+        if (excludeId == null ? count > 0 : count > 1) {
             throw new BizException(ErrorCode.CONFLICT, "分类名称已存在");
         }
     }

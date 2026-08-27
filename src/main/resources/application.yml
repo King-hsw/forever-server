@@ -1,16 +1,13 @@
 spring:
   application:
     name: forever-server
-  # 本地开发私密配置（不入 git）：数据库账密、JWT 密钥、blog.* 全部在 ./local/application-local.yml
+  # 本地开发私密配置（不入 git）：数据库账密、blog.* 全部在 ./local/application-local.yml
   # 首次克隆仓库后需手动创建该文件才能启动，模板见 README 或向仓库维护者索取
   config:
     import:
       - optional:file:./local/application-local.yml
   flyway:
     enabled: true
-  servlet:
-    multipart:
-      max-file-size: 10MB
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
@@ -19,5 +16,5 @@ mybatis:
 
 # 日志级别与输出在 logback-spring.xml 中统一维护
 
-# 说明：blog.* 仅保留启动期必要项（jwt/admin/upload，见 local/application-local.yml）；
+# 说明：blog.* 仅保留启动期必要项（admin，见 local/application-local.yml）；
 # 评论策略、站点地址等运行参数由后台「站点设置」管理：GET/PUT /api/admin/settings

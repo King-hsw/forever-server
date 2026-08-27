@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.sensitive.SensitiveWordMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO sensitive_word (word, replacement) VALUES (#{word}, #{replacement})
+    </insert>
+
+    <update id="update">
+        UPDATE sensitive_word SET word = #{word}, replacement = #{replacement} WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM sensitive_word WHERE id = #{id}
+    </delete>
+
+    <select id="findAll" resultType="com.forever.server.sensitive.SensitiveWord">
+        SELECT * FROM sensitive_word ORDER BY id DESC
+    </select>
+</mapper>

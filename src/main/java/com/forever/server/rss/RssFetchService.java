@@ -1,5 +1,6 @@
 package com.forever.server.rss;
 
+import com.forever.server.common.Strings;
 import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
@@ -68,7 +69,7 @@ public class RssFetchService {
                     synd.getTitle(), inserted);
             return true;
         } catch (Exception e) {
-            String error = truncate(e.getClass().getSimpleName() + ": " + e.getMessage(), 500);
+            String error = Strings.truncate(e.getClass().getSimpleName() + ": " + e.getMessage(), 500);
             feedMapper.markError(feed.getId(), error, LocalDateTime.now());
             log.warn("rss fetch failed: id={}, url={}, reason={}", feed.getId(), feed.getFeedUrl(), error);
             return false;
@@ -107,8 +108,8 @@ public class RssFetchService {
             }
             RssItem item = new RssItem();
             item.setFeedId(feedId);
-            item.setLink(truncate(link, 500));
-            item.setTitle(truncate(title, 500));
+            item.setLink(Strings.truncate(link, 500));
+            item.setTitle(Strings.truncate(title, 500));
             item.setSummary(extractSummary(entry));
             item.setPublishedAt(toLocalDateTime(
                     entry.getPublishedDate() != null ? entry.getPublishedDate() : entry.getUpdatedDate()));
@@ -129,7 +130,7 @@ public class RssFetchService {
         text = text.replaceAll("<[^>]*>", " ")
                 .replaceAll("\\s+", " ")
                 .trim();
-        return truncate(text, SUMMARY_MAX);
+        return Strings.truncate(text, SUMMARY_MAX);
     }
 
     private static LocalDateTime toLocalDateTime(Date date) {
@@ -137,7 +138,4 @@ public class RssFetchService {
                 : LocalDateTime.ofInstant(date.toInstant(), java.time.ZoneId.systemDefault());
     }
 
-    private static String truncate(String s, int max) {
-        return s.length() <= max ? s : s.substring(0, max);
-    }
 }

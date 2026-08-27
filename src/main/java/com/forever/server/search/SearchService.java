@@ -3,6 +3,7 @@ package com.forever.server.search;
 import com.forever.server.article.Article;
 import com.forever.server.article.ArticleMapper;
 import com.forever.server.common.PageResult;
+import com.forever.server.common.Strings;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
@@ -64,7 +65,7 @@ public class SearchService {
      */
     SearchItemResponse.Highlights buildHighlights(SearchMapper.SearchRow row, String kw) {
         String plainContent = plainText(row.content());
-        String summary = blankToNull(row.summary());
+        String summary = Strings.blankToNull(row.summary());
 
         // 片段来源：正文第一命中 > 摘要第一命中 > 纯文本开头兜底
         String excerpt;
@@ -77,7 +78,7 @@ public class SearchService {
             String fallback = !plainContent.isBlank() ? plainContent
                     : (summary != null ? plainText(summary) : null);
             excerpt = fallback == null || fallback.isBlank() ? null
-                    : HtmlUtils.htmlEscape(truncate(fallback)) + (fallback.length() > EXCERPT_MAX_LENGTH ? "…" : "");
+                    : HtmlUtils.htmlEscape(Strings.truncate(fallback, EXCERPT_MAX_LENGTH)) + (fallback.length() > EXCERPT_MAX_LENGTH ? "…" : "");
         }
         return new SearchItemResponse.Highlights(highlight(row.title(), kw), excerpt);
     }
@@ -129,19 +130,11 @@ public class SearchService {
         return text.toLowerCase().indexOf(kw.toLowerCase());
     }
 
-    private static String truncate(String s) {
-        return s.length() > EXCERPT_MAX_LENGTH ? s.substring(0, EXCERPT_MAX_LENGTH) : s;
-    }
-
     private static String normalize(String keyword) {
         if (keyword == null) {
             return "";
         }
         String kw = keyword.trim();
         return kw.length() > MAX_KEYWORD_LENGTH ? kw.substring(0, MAX_KEYWORD_LENGTH) : kw;
-    }
-
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s.trim();
     }
 }

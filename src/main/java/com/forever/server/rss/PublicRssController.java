@@ -1,6 +1,7 @@
 package com.forever.server.rss;
 
 import com.forever.server.common.ApiResponse;
+import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,20 +29,12 @@ public class PublicRssController {
     public ApiResponse<PageResult<RssItemResponse>> items(
             @Parameter(description = "页码，从 1 开始", example = "1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数（最大 100）", example = "20") @RequestParam(defaultValue = "20") int size) {
-        return ApiResponse.ok(rssService.pageItems(page, normalizeSize(size)));
+        return ApiResponse.ok(rssService.pageItems(page, PageParams.normalizeSize(size)));
     }
 
     @Operation(summary = "订阅源列表", description = "供前台展示博客朋友圈，仅返回启用中的源")
     @GetMapping("/feeds")
     public ApiResponse<List<RssFeedResponse>> feeds() {
         return ApiResponse.ok(rssService.listEnabledFeeds());
-    }
-
-    /** 与 article 包 PageParams 同规则：size 夹在 [1, 100]，非法回退默认值 */
-    private static int normalizeSize(int size) {
-        if (size <= 0) {
-            return 20;
-        }
-        return Math.min(size, 100);
     }
 }

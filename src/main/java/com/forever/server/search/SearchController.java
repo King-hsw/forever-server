@@ -1,6 +1,7 @@
 package com.forever.server.search;
 
 import com.forever.server.common.ApiResponse;
+import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -28,8 +29,8 @@ public class SearchController {
             @Parameter(description = "关键词") @RequestParam(required = false) String keyword,
             @Parameter(description = "页码，从 1 开始", example = "1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数（最大 100）", example = "10") @RequestParam(defaultValue = "10") int size) {
-        size = Math.min(Math.max(size, 1), 100);
-        page = Math.max(page, 1);
+        size = PageParams.normalizeSize(size);
+        page = PageParams.normalizePage(page);
         return ApiResponse.ok(searchService.search(keyword, page, size));
     }
 }

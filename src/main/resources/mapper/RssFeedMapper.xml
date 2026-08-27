@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.rss.RssFeedMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO rss_feed (title, site_url, feed_url, description, enabled)
+        VALUES (#{title}, #{siteUrl}, #{feedUrl}, #{description}, #{enabled})
+    </insert>
+
+    <update id="update">
+        UPDATE rss_feed
+        SET title = #{title}, site_url = #{siteUrl}, feed_url = #{feedUrl},
+            description = #{description}, enabled = #{enabled}
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM rss_feed WHERE id = #{id}
+    </delete>
+
+    <select id="findAll" resultType="com.forever.server.rss.RssFeed">
+        SELECT * FROM rss_feed ORDER BY created_at DESC
+    </select>
+
+    <select id="findById" resultType="com.forever.server.rss.RssFeed">
+        SELECT * FROM rss_feed WHERE id = #{id}
+    </select>
+
+    <select id="findEnabled" resultType="com.forever.server.rss.RssFeed">
+        SELECT * FROM rss_feed WHERE enabled = TRUE
+    </select>
+
+    <select id="countByFeedUrl" resultType="long">
+        SELECT COUNT(*) FROM rss_feed WHERE feed_url = #{feedUrl}
+    </select>
+
+    <!-- 抓取成功：回填标题/描述、刷新时间、清空错误 -->
+    <update id="markSuccess">
+        UPDATE rss_feed
+        SET title       = COALESCE(NULLIF(title, ''), #{fallbackTitle}),
+            description = COALESCE(description, #{description}),
+            last_fetched_at = #{now},
+            last_error  = NULL
+        WHERE id = #{id}
+    </update>
+
+    <update id="markError">
+        UPDATE rss_feed SET last_fetched_at = #{now}, last_error = #{error} WHERE id = #{id}
+    </update>
+</mapper>

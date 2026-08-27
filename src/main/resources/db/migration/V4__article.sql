@@ -6,7 +6,7 @@ CREATE TABLE article (
     summary      VARCHAR(500),
     content      TEXT         NOT NULL,
     cover_image  VARCHAR(500),
-    category_id  BIGINT       REFERENCES category(id),
+    category_id  BIGINT,                      -- 逻辑关联 category.id，无外键约束
     status       VARCHAR(20)  NOT NULL DEFAULT 'DRAFT',
     view_count   BIGINT       NOT NULL DEFAULT 0,
     published_at TIMESTAMP,

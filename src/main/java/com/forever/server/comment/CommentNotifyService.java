@@ -84,7 +84,7 @@ public class CommentNotifyService {
         helper.setSubject(subject);
         helper.setText(text);
         helper.setFrom(new InternetAddress(siteConfig.getString(SiteConfigService.COMMENT_FROM_EMAIL,
-                "noreply@example.com"), "补陋阁"));
+                "noreply@example.com"), siteConfig.siteName()));
         sender.send(message);
         log.info("comment notify mail sent: to={}, subject={}", to, subject);
     }

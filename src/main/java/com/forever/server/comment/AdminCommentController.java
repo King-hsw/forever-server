@@ -1,6 +1,7 @@
 package com.forever.server.comment;
 
 import com.forever.server.common.ApiResponse;
+import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,7 +34,7 @@ public class AdminCommentController {
             @RequestParam(required = false) String targetType,
             @Parameter(description = "页码，从 1 开始", example = "1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数（最大 100）", example = "20") @RequestParam(defaultValue = "20") int size) {
-        size = Math.min(Math.max(size, 1), 100);
+        size = PageParams.normalizeSize(size);
         status = status == null || status.isBlank() ? null : status;
         targetType = targetType == null || targetType.isBlank() ? null : targetType;
         return ApiResponse.ok(commentService.pageAdmin(status, targetType, page, size));

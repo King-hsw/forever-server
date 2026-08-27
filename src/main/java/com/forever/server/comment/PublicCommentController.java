@@ -1,7 +1,9 @@
 package com.forever.server.comment;
 
 import com.forever.server.common.ApiResponse;
+import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
+import com.forever.server.common.Web;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,7 +32,7 @@ public class PublicCommentController {
             @Parameter(description = "文章 id") @PathVariable Long articleId,
             @Parameter(description = "页码，从 1 开始", example = "1") @RequestParam(defaultValue = "1") int page,
             @Parameter(description = "每页条数（最大 100）", example = "10") @RequestParam(defaultValue = "10") int size) {
-        size = Math.min(Math.max(size, 1), 100);
+        size = PageParams.normalizeSize(size);
         return ApiResponse.ok(commentService.pageByArticle(articleId, page, size));
     }
 
@@ -41,16 +43,7 @@ public class PublicCommentController {
     @PostMapping("/api/v1/comments")
     public ApiResponse<CommentAdminResponse> create(@Valid @RequestBody CommentCreateRequest request,
                                                     HttpServletRequest httpRequest) {
-        String ip = clientIp(httpRequest);
+        String ip = Web.clientIp(httpRequest);
         return ApiResponse.ok(commentService.create(request, ip));
-    }
-
-    /** 优先取代理转发头，兼容 Nginx 反代部署 */
-    static String clientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 }

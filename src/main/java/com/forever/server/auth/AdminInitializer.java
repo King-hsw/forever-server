@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * 单管理员初始化：应用启动时检测 sys_user 为空，
- * 则按 blog.admin.* 配置创建管理员（密码 BCrypt 存储）并授予内置 ADMIN 角色。
+ * 则按 blog.admin.* 配置创建管理员（密码 BCrypt 存储）。
  * 生产环境务必通过环境变量覆盖默认账密。
  */
 @Component
@@ -21,16 +21,13 @@ public class AdminInitializer implements ApplicationRunner {
     private final SysUserMapper sysUserMapper;
     private final PasswordEncoder passwordEncoder;
     private final BlogProperties props;
-    private final RbacMapper rbacMapper;
 
     public AdminInitializer(SysUserMapper sysUserMapper,
                             PasswordEncoder passwordEncoder,
-                            BlogProperties props,
-                            RbacMapper rbacMapper) {
+                            BlogProperties props) {
         this.sysUserMapper = sysUserMapper;
         this.passwordEncoder = passwordEncoder;
         this.props = props;
-        this.rbacMapper = rbacMapper;
     }
 
     @Override
@@ -44,12 +41,6 @@ public class AdminInitializer implements ApplicationRunner {
         admin.setNickname("admin");
         admin.setStatus("ACTIVE");
         sysUserMapper.insert(admin);
-
-        // 初始管理员挂内置 ADMIN 角色（V15 已为存量用户补挂，这里覆盖首次启动场景）
-        SysRole adminRole = rbacMapper.findRoleByCode("ADMIN");
-        if (adminRole != null) {
-            rbacMapper.insertUserRole(admin.getId(), adminRole.getId());
-        }
         log.info("initialized admin user '{}', please change the default credentials",
                 admin.getUsername());
     }

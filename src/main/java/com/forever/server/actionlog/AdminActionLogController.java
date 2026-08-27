@@ -2,6 +2,7 @@ package com.forever.server.actionlog;
 
 import com.forever.server.common.ApiResponse;
 import com.forever.server.common.PageResult;
+import com.forever.server.common.Strings;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -30,12 +31,8 @@ public class AdminActionLogController {
             @Parameter(description = "每页条数（最大 100）", example = "20") @RequestParam(defaultValue = "20") int size,
             @Parameter(description = "操作人，精确匹配", example = "admin") @RequestParam(required = false) String username,
             @Parameter(description = "路径关键词，模糊匹配", example = "/api/admin/articles") @RequestParam(required = false) String path) {
-        PageResult<ActionLog> result = actionLogService.page(page, size, blankToNull(username), blankToNull(path));
+        PageResult<ActionLog> result = actionLogService.page(page, size, Strings.blankToNull(username), Strings.blankToNull(path));
         List<ActionLogResponse> items = result.list().stream().map(ActionLogResponse::from).toList();
         return ApiResponse.ok(PageResult.of(items, result.total(), result.page(), result.size()));
-    }
-
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s.trim();
     }
 }

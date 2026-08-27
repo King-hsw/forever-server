@@ -1,6 +1,7 @@
 package com.forever.server.article;
 
 import com.forever.server.common.ApiResponse;
+import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -22,9 +23,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminArticleController {
 
     private final ArticleService articleService;
+    private final AiSummaryService aiSummaryService;
 
-    public AdminArticleController(ArticleService articleService) {
+    public AdminArticleController(ArticleService articleService, AiSummaryService aiSummaryService) {
         this.articleService = articleService;
+        this.aiSummaryService = aiSummaryService;
     }
 
     @Operation(summary = "分页查询文章", description = "管理端全量查询，含草稿；keyword 模糊匹配标题")
@@ -37,7 +40,7 @@ public class AdminArticleController {
             @Parameter(description = "分类 id 过滤") @RequestParam(required = false) Long categoryId) {
         return ApiResponse.ok(articleService.pageAdmin(
                 page, PageParams.normalizeSize(size),
-                PageParams.parseStatus(status), keyword, categoryId));
+                parseStatus(status), keyword, categoryId));
     }
 
     @Operation(summary = "创建文章", description = "创建后默认为 DRAFT 状态，需调用发布接口上线")
@@ -78,5 +81,23 @@ public class AdminArticleController {
     public ApiResponse<Void> unpublish(@PathVariable Long id) {
         articleService.unpublish(id);
         return ApiResponse.ok();
+    }
+
+    @Operation(summary = "AI 生成概要", description = "调大模型为文章正文生成中文摘要并写入 summary；需在站点设置中开启 ai.summary-enabled 并配置 ai.api-key")
+    @PostMapping("/{id}/ai-summary")
+    public ApiResponse<ArticleResponse> aiSummary(@PathVariable Long id) {
+        String summary = aiSummaryService.generate(id);
+        return ApiResponse.ok(articleService.getById(id));
+    }
+
+    private static ArticleStatus parseStatus(String status) {
+        if (status == null || status.isBlank()) {
+            return null;
+        }
+        try {
+            return ArticleStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
     }
 }

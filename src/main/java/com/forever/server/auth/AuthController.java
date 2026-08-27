@@ -16,16 +16,34 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final TokenService tokenService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, TokenService tokenService) {
         this.authService = authService;
+        this.tokenService = tokenService;
     }
 
-    @Operation(summary = "登录", description = "校验用户名密码，签发 JWT；登录成败均入审计日志（同一账号连续失败 5 次锁定 15 分钟（如有此逻辑请以 AuthService 为准）")
+    @Operation(summary = "登录", description = "校验用户名密码，签发双令牌（access + refresh）；登录成败均入审计日志")
     @PostMapping("/login")
     public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request,
                                             HttpServletRequest httpRequest) {
         return ApiResponse.ok(authService.login(request, clientIp(httpRequest)));
+    }
+
+    @Operation(summary = "换发令牌", description = "用 refreshToken 换新令牌对；旧令牌对作废（轮换防重放）")
+    @PostMapping("/refresh")
+    public ApiResponse<LoginResponse> refresh(@RequestBody RefreshRequest request) {
+        return ApiResponse.ok(tokenService.rotate(request.refreshToken()));
+    }
+
+    @Operation(summary = "登出", description = "吊销该会话的令牌对；幂等，重复调用无副作用")
+    @PostMapping("/logout")
+    public ApiResponse<Void> logout(@RequestBody RefreshRequest request) {
+        tokenService.revokeByRefreshToken(request.refreshToken());
+        return ApiResponse.ok();
+    }
+
+    public record RefreshRequest(String refreshToken) {
     }
 
     /** 优先取代理转发头，兼容 Nginx 反代部署 */

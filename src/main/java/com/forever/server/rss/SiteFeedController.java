@@ -44,11 +44,13 @@ public class SiteFeedController {
     public ResponseEntity<String> rss() throws com.rometools.rome.io.FeedException {
         String siteUrl = trimTrailingSlash(siteConfig.getString(SiteConfigService.SITE_URL, ""));
 
+        String siteName = siteConfig.siteName();
+
         SyndFeed feed = new SyndFeedImpl();
         feed.setFeedType("rss_2.0");
-        feed.setTitle("补陋阁");
+        feed.setTitle(siteName);
         feed.setLink(siteUrl);
-        feed.setDescription("补陋阁 - 个人博客最新文章");
+        feed.setDescription(siteName + " - 个人博客最新文章");
 
         List<Article> articles =
                 articleMapper.publicPage(null, null, null, 0, FEED_SIZE);

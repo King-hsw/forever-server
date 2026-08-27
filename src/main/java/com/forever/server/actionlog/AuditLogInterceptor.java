@@ -1,5 +1,6 @@
 package com.forever.server.actionlog;
 
+import com.forever.server.common.Web;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,7 @@ public class AuditLogInterceptor implements HandlerInterceptor {
                     request.getMethod(),
                     request.getRequestURI(),
                     response.getStatus(),
-                    clientIp(request),
+                    Web.clientIp(request),
                     System.currentTimeMillis() - start);
         } catch (Exception e) {
             log.warn("audit interceptor failed: path={}, reason={}", request.getRequestURI(), e.getMessage());
@@ -62,14 +63,5 @@ public class AuditLogInterceptor implements HandlerInterceptor {
     private static String currentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.isAuthenticated() ? auth.getName() : null;
-    }
-
-    /** 优先取代理转发头，兼容 Nginx 反代部署 */
-    private static String clientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 }

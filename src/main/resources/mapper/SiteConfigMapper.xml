@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.setting.SiteConfigMapper">
+
+    <select id="findAll" resultType="com.forever.server.setting.SiteConfig">
+        SELECT * FROM sys_site_config ORDER BY config_key
+    </select>
+
+    <select id="findByKey" resultType="com.forever.server.setting.SiteConfig">
+        SELECT * FROM sys_site_config WHERE config_key = #{key}
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO sys_site_config (config_key, config_value) VALUES (#{key}, #{value})
+        ON CONFLICT (config_key) DO UPDATE
+            SET config_value = EXCLUDED.config_value,
+                updated_at = CURRENT_TIMESTAMP
+    </insert>
+</mapper>
