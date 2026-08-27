@@ -40,4 +40,7 @@ public interface CommentMapper {
 
     /** 删除评论及其楼中所有回复 */
     int deleteWithReplies(Long id);
+
+    /** 删除某目标下全部评论（含未过审，随目标删除时清理） */
+    int deleteByTarget(@Param("targetType") String targetType, @Param("targetId") long targetId);
 }

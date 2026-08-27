@@ -7,6 +7,7 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
+import com.forever.server.moment.MomentMapper;
 import com.forever.server.sensitive.SensitiveWordService;
 import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
@@ -31,9 +32,12 @@ public class CommentService {
 
     static final String TARGET_ARTICLE = "ARTICLE";
     static final String TARGET_BOARD = "BOARD";
+    /** MOMENT 目标供 moment 包引用 */
+    public static final String TARGET_MOMENT = "MOMENT";
 
     private final CommentMapper commentMapper;
     private final ArticleMapper articleMapper;
+    private final MomentMapper momentMapper;
     private final SensitiveWordService sensitiveWordService;
     private final SiteConfigService siteConfig;
     private final CommentNotifyService notifyService;
@@ -42,11 +46,13 @@ public class CommentService {
 
     public CommentService(CommentMapper commentMapper,
                           ArticleMapper articleMapper,
+                          MomentMapper momentMapper,
                           SensitiveWordService sensitiveWordService,
                           SiteConfigService siteConfig,
                           CommentNotifyService notifyService) {
         this.commentMapper = commentMapper;
         this.articleMapper = articleMapper;
+        this.momentMapper = momentMapper;
         this.sensitiveWordService = sensitiveWordService;
         this.siteConfig = siteConfig;
         this.notifyService = notifyService;
@@ -64,6 +70,11 @@ public class CommentService {
     /** 留言板分页（BOARD 评论全部挂在固定 target_id = 0 上） */
     public PageResult<CommentResponse> pageByBoard(int page, int size) {
         return pageRoots(TARGET_BOARD, 0L, page, size);
+    }
+
+    /** 动态评论分页（MOMENT 评论挂在 target_id = 动态 id 上） */
+    public PageResult<CommentResponse> pageByMoment(Long momentId, int page, int size) {
+        return pageRoots(TARGET_MOMENT, momentId, page, size);
     }
 
     private PageResult<CommentResponse> pageRoots(String targetType, long targetId, int page, int size) {
@@ -124,6 +135,14 @@ public class CommentService {
     /** 发表留言板留言（不关联文章） */
     public CommentAdminResponse createBoard(CommentCreateRequest request, String ip) {
         return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), request, ip);
+    }
+
+    /** 发表动态评论 */
+    public CommentAdminResponse createMoment(Long momentId, CommentCreateRequest request, String ip) {
+        if (momentMapper.findById(momentId) == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "动态不存在");
+        }
+        return doCreate(TARGET_MOMENT, momentId, "动态 #" + momentId, request, ip);
     }
 
     private CommentAdminResponse doCreate(String targetType, long targetId, String sourceTitle,
@@ -238,7 +257,9 @@ public class CommentService {
 
     private CommentAdminResponse toAdminResponse(Comment c) {
         String title;
-        if (TARGET_BOARD.equals(c.getTargetType())) {
+        if (TARGET_MOMENT.equals(c.getTargetType())) {
+            title = "动态 #" + c.getTargetId();
+        } else if (TARGET_BOARD.equals(c.getTargetType())) {
             title = null; // 前端按 targetType 显示「留言板」
         } else {
             Article article = articleMapper.findById(c.getTargetId());

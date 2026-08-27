@@ -8,6 +8,11 @@ spring:
       - optional:file:./local/application-local.yml
   flyway:
     enabled: true
+  # 动态媒体上传：单文件 120MB（视频 100MB 上限留余量）/ 单请求 130MB
+  servlet:
+    multipart:
+      max-file-size: 120MB
+      max-request-size: 130MB
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml

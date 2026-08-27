@@ -12,6 +12,8 @@ public interface SysUserMapper {
 
     SysUser findById(Long id);
 
+    List<SysUser> findByIds(@Param("ids") List<Long> ids);
+
     long countAll();
 
     int insert(SysUser user);

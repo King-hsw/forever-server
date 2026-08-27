@@ -69,4 +69,9 @@
     <delete id="deleteWithReplies">
         DELETE FROM comment WHERE id = #{id} OR root_id = #{id}
     </delete>
+
+    <!-- 删除某目标下全部评论（随目标删除时清理） -->
+    <delete id="deleteByTarget">
+        DELETE FROM comment WHERE target_type = #{targetType} AND target_id = #{targetId}
+    </delete>
 </mapper>

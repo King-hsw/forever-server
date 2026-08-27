@@ -3,6 +3,7 @@ package com.forever.server.common;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -22,6 +23,13 @@ public class GlobalExceptionHandler {
         log.warn("biz exception: code={}, message={}", e.errorCode().code(), e.getMessage());
         return ResponseEntity.status(e.errorCode().httpStatus())
                 .body(new ApiResponse<>(e.errorCode().code(), e.getMessage(), e.data()));
+    }
+
+    /** 请求体 JSON 非法或字段类型不符（如 images 元素不是字符串）：统一 400 */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException e) {
+        log.warn("request body not readable: {}", e.getMessage());
+        return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.BAD_REQUEST, "请求体格式不正确"));
     }
 
     /** Bean Validation 校验失败：data 返回字段级错误明细 */
