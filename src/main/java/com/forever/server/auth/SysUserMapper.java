@@ -22,5 +22,10 @@ public interface SysUserMapper {
 
     int updatePassword(@Param("id") Long id, @Param("password") String password);
 
+    int updateProfile(@Param("id") Long id, @Param("nickname") String nickname,
+                      @Param("email") String email, @Param("site") String site);
+
+    int updateAvatarUrl(@Param("id") Long id, @Param("avatarUrl") String avatarUrl);
+
     int updateNickname(@Param("id") Long id, @Param("nickname") String nickname);
 }

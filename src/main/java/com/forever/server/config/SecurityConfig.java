@@ -85,6 +85,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/auth/**").permitAll()
                         // 前台公开接口（含访客评论的读写）与本站 RSS 输出
                         .requestMatchers("/api/v1/**", "/rss").permitAll()
+                        // 用户上传文件（头像等），公开可读
+                        .requestMatchers("/uploads/**").permitAll()
                         // 健康检查与 API 文档
                         .requestMatchers("/actuator/health",
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

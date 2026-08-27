@@ -12,9 +12,7 @@ import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
-import org.springframework.util.DigestUtils;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -98,13 +96,13 @@ public class CommentService {
                                 .getOrDefault(root.getId(), List.of()).stream()
                                 .map(r -> {
                                     Comment p = parents.get(r.getParentId());
-                                    return CommentResponse.reply(r, avatarUrl(r.getEmail()),
+                                    return CommentResponse.reply(r, Strings.gravatarUrl(r.getEmail()),
                                             p == null ? null : p.getNickname(),
                                             p == null ? null : p.getContent());
                                 })
                                 .toList();
                         return new CommentResponse(root.getId(), null, root.getNickname(),
-                                avatarUrl(root.getEmail()), root.getSite(), root.getContent(),
+                                Strings.gravatarUrl(root.getEmail()), root.getSite(), root.getContent(),
                                 root.getCreatedAt(), replies, null, null);
                     })
                     .toList();
@@ -250,12 +248,5 @@ public class CommentService {
                 c.getParentId(), c.getRootId(),
                 c.getNickname(), c.getEmail(), c.getSite(), c.getContent(),
                 c.getStatus(), c.getIp(), c.getCreatedAt());
-    }
-
-    /** 头像：邮箱 MD5 -> Cravatar（Gravatar 国内镜像） */
-    static String avatarUrl(String email) {
-        String hash = DigestUtils.md5DigestAsHex(
-                email.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
-        return "https://cravatar.cn/avatar/" + hash + "?d=mp&s=80";
     }
 }

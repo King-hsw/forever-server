@@ -1,6 +1,9 @@
 package com.forever.server.common;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
+
+import org.springframework.util.DigestUtils;
 
 /** 字符串与 URL 校验工具 */
 public final class Strings {
@@ -29,5 +32,12 @@ public final class Strings {
             throw new BizException(ErrorCode.BAD_REQUEST, label + "必须是合法的 http(s) 地址");
         }
         return url.trim();
+    }
+
+    /** 邮箱 → Gravatar 头像（Cravatar 国内镜像） */
+    public static String gravatarUrl(String email) {
+        String hash = DigestUtils.md5DigestAsHex(
+                email.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
+        return "https://cravatar.cn/avatar/" + hash + "?d=mp&s=80";
     }
 }
