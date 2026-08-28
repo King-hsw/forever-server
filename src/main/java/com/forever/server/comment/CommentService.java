@@ -3,6 +3,8 @@ package com.forever.server.comment;
 import com.forever.server.article.Article;
 import com.forever.server.article.ArticleMapper;
 import com.forever.server.article.ArticleStatus;
+import com.forever.server.auth.SysUser;
+import com.forever.server.auth.SysUserMapper;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
@@ -41,6 +43,7 @@ public class CommentService {
     private final SensitiveWordService sensitiveWordService;
     private final SiteConfigService siteConfig;
     private final CommentNotifyService notifyService;
+    private final SysUserMapper sysUserMapper;
     /** IP -> 上次发评时间，简单内存限流（单实例够用） */
     private final Map<String, LocalDateTime> lastPostByIp = new ConcurrentHashMap<>();
 
@@ -49,13 +52,15 @@ public class CommentService {
                           MomentMapper momentMapper,
                           SensitiveWordService sensitiveWordService,
                           SiteConfigService siteConfig,
-                          CommentNotifyService notifyService) {
+                          CommentNotifyService notifyService,
+                          SysUserMapper sysUserMapper) {
         this.commentMapper = commentMapper;
         this.articleMapper = articleMapper;
         this.momentMapper = momentMapper;
         this.sensitiveWordService = sensitiveWordService;
         this.siteConfig = siteConfig;
         this.notifyService = notifyService;
+        this.sysUserMapper = sysUserMapper;
     }
 
     // ---------- 公开端 ----------
@@ -129,24 +134,25 @@ public class CommentService {
         if (article == null || article.getStatus() != ArticleStatus.PUBLISHED) {
             throw new BizException(ErrorCode.NOT_FOUND, "文章不存在");
         }
-        return doCreate(TARGET_ARTICLE, request.articleId(), article.getTitle(), request, ip);
+        return doCreate(TARGET_ARTICLE, request.articleId(), article.getTitle(), request, ip, visitorIdentity(request));
     }
 
     /** 发表留言板留言（不关联文章） */
     public CommentAdminResponse createBoard(CommentCreateRequest request, String ip) {
-        return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), request, ip);
+        return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), request, ip, visitorIdentity(request));
     }
 
-    /** 发表动态评论 */
-    public CommentAdminResponse createMoment(Long momentId, CommentCreateRequest request, String ip) {
+    /** 发表动态评论：登录用户（viewerUid 非空）自动以其 sys_user 资料身份发布，邮箱可为空 */
+    public CommentAdminResponse createMoment(Long momentId, Long viewerUid, CommentCreateRequest request, String ip) {
         if (momentMapper.findById(momentId) == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "动态不存在");
         }
-        return doCreate(TARGET_MOMENT, momentId, "动态 #" + momentId, request, ip);
+        Identity identity = viewerUid != null ? userIdentity(viewerUid) : visitorIdentity(request);
+        return doCreate(TARGET_MOMENT, momentId, "动态 #" + momentId, request, ip, identity);
     }
 
     private CommentAdminResponse doCreate(String targetType, long targetId, String sourceTitle,
-                                          CommentCreateRequest request, String ip) {
+                                          CommentCreateRequest request, String ip, Identity identity) {
         throttle(ip);
 
         Comment parent = null;
@@ -160,9 +166,9 @@ public class CommentService {
         comment.setParentId(parent == null ? null : parent.getId());
         comment.setRootId(parent == null ? null
                 : (parent.getRootId() != null ? parent.getRootId() : parent.getId()));
-        comment.setNickname(request.nickname().trim());
-        comment.setEmail(request.email().trim());
-        comment.setSite(Strings.blankToNull(request.site()));
+        comment.setNickname(identity.nickname());
+        comment.setEmail(identity.email());
+        comment.setSite(identity.site());
         comment.setContent(sensitiveWordService.mask(request.content().trim()));
 
         boolean autoApprove = siteConfig.getBoolean(SiteConfigService.COMMENT_AUTO_APPROVE, true);
@@ -208,6 +214,29 @@ public class CommentService {
     }
 
     // ---------- internal ----------
+
+    /** 发言身份：昵称 + 邮箱（可为空，登录用户资料未填时）+ 主页 */
+    private record Identity(String nickname, String email, String site) {
+    }
+
+    /** 游客身份：取自请求体；DB 允许邮箱为空（登录用户），游客仍显式要求 */
+    private Identity visitorIdentity(CommentCreateRequest request) {
+        if (request.email() == null || request.email().isBlank()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "邮箱不能为空");
+        }
+        return new Identity(request.nickname().trim(), request.email().trim(), Strings.blankToNull(request.site()));
+    }
+
+    /** 登录用户身份：取自 sys_user，忽略请求体携带的身份字段（昵称缺省回落用户名） */
+    private Identity userIdentity(Long uid) {
+        SysUser user = sysUserMapper.findById(uid);
+        if (user == null) {
+            throw new BizException(ErrorCode.UNAUTHORIZED, "登录用户不存在");
+        }
+        String nickname = Strings.blankToNull(user.getNickname());
+        return new Identity(nickname != null ? nickname.trim() : user.getUsername(),
+                Strings.blankToNull(user.getEmail()), Strings.blankToNull(user.getSite()));
+    }
 
     private void throttle(String ip) {
         long intervalMs = postIntervalMs();

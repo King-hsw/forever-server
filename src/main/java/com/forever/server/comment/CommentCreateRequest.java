@@ -13,8 +13,8 @@ public record CommentCreateRequest(
         Long parentId,
         @Schema(description = "昵称", example = "路人甲")
         @NotBlank(message = "昵称不能为空") @Size(max = 50) String nickname,
-        @Schema(description = "邮箱，不公开展示；用于生成头像和接收回复通知", example = "someone@example.com")
-        @NotBlank(message = "邮箱不能为空") @Email(message = "邮箱格式不正确") @Size(max = 100) String email,
+        @Schema(description = "邮箱，不公开展示；用于生成头像和接收回复通知。登录用户发动态评论时由服务端按其资料填充，可为空", example = "someone@example.com")
+        @Email(message = "邮箱格式不正确") @Size(max = 100) String email,
         @Schema(description = "个人主页，选填；昵称点击跳转", example = "https://example.com")
         @Size(max = 200) String site,
         @Schema(description = "内容", example = "写得太好了！")

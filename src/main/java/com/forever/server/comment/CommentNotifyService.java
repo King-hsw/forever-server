@@ -73,6 +73,9 @@ public class CommentNotifyService {
     }
 
     private void send(String to, String subject, String text) throws Exception {
+        if (to == null || to.isBlank()) {
+            return; // 收件人未留邮箱（登录用户资料无邮箱），不发
+        }
         JavaMailSender sender = mailSenderProvider.getIfAvailable();
         if (sender == null) {
             log.debug("mail skipped: spring.mail not configured");

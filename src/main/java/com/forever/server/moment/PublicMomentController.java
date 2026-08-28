@@ -70,13 +70,14 @@ public class PublicMomentController {
         return ApiResponse.ok(commentService.pageByMoment(id, page, size));
     }
 
-    @Operation(summary = "发表动态评论", description = "游客可评；限流 / 敏感词 / 审核规则与文章/留言板评论一致")
+    @Operation(summary = "发表动态评论", description = "游客可评；带有效登录态时自动以 sys_user 资料身份发布（昵称/邮箱/主页，邮箱可为空）；限流 / 敏感词 / 审核规则与文章/留言板评论一致")
     @PostMapping("/api/v1/moments/{id}/comments")
     public ApiResponse<CommentAdminResponse> createComment(
             @PathVariable Long id,
             @Valid @RequestBody CommentCreateRequest request,
-            HttpServletRequest httpRequest) {
-        return ApiResponse.ok(commentService.createMoment(id, request, Web.clientIp(httpRequest)));
+            HttpServletRequest httpRequest,
+            Authentication authentication) {
+        return ApiResponse.ok(commentService.createMoment(id, viewerUid(authentication), request, Web.clientIp(httpRequest)));
     }
 
     /** 公开接口不强制登录：带有效 Bearer 返回其 uid，匿名 / 无效凭证返回空 */

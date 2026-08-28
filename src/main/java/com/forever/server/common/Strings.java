@@ -34,8 +34,11 @@ public final class Strings {
         return url.trim();
     }
 
-    /** 邮箱 → Gravatar 头像（Cravatar 国内镜像） */
+    /** 邮箱 → Gravatar 头像（Cravatar 国内镜像）；邮箱为空（登录用户未填资料邮箱）返回 null */
     public static String gravatarUrl(String email) {
+        if (email == null || email.isBlank()) {
+            return null;
+        }
         String hash = DigestUtils.md5DigestAsHex(
                 email.trim().toLowerCase().getBytes(StandardCharsets.UTF_8));
         return "https://cravatar.cn/avatar/" + hash + "?d=mp&s=80";
