@@ -124,7 +124,7 @@
 - **私有模式**：302 跳预签名下载 URL（`storage.presign-ttl`，默认 15 分钟）
 - **公开读模式**（`storage.public-read`，小带宽服务器建议开启）：自动安装匿名只读桶策略（仅 `moment/` 与 `avatar/` 前缀，`tmp/` 与列举保持私有），302 跳固定直链，对象带缓存策略——moment 媒体 `immutable` 强缓存一年、avatar 每次再校验，每个访客每个文件只拉一次；URL 恒定，日后接 CDN 零改造
 
-**存储配置在后台「站点设置」在线完成**（`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl` / `tmp-expire-days` / `public-read`），保存即时生效、重启不丢，换对象存储无需重新部署；`blog.storage.*`（yml/环境变量）仅作未在后台配置时的兜底默认值。S3 客户端按配置元组惰性构建，配置变更后自动重建并幂等预配桶（建桶、`tmp/` 生命周期、公开读策略）。连接信息不完整时应用正常启动，仅上传/下载报「配置不完整」。
+**存储配置统一在后台「站点设置」在线完成**（`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl` / `tmp-expire-days` / `public-read`），保存即时生效、重启不丢，换对象存储无需重新部署。S3 客户端按配置元组惰性构建，配置变更后自动重建并幂等预配桶（建桶、`tmp/` 生命周期、公开读策略）。连接信息不完整时应用正常启动，仅上传/下载报「配置不完整」。
 
 **动态媒体直传**（可选，大文件如 100MB 视频绕过服务端中转）：
 
@@ -139,7 +139,7 @@
 docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 ```
 
-然后启动后登录后台「站点设置」填入 `http://localhost:9000` / `rustfsadmin` / `rustfsadmin` / `forever`（或在 `local/application-local.yml` 的 `blog.storage.*` 配置同一组值，作为兜底默认）。
+然后启动后登录后台「站点设置」填入 `http://localhost:9000` / `rustfsadmin` / `rustfsadmin` / `forever`。
 
 > 前端直连预签名地址（跨域 XHR）时需在 RustFS 控制台为桶开启 CORS；`<img>`/`<video>` 标签加载不受影响。
 
@@ -232,14 +232,13 @@ mvn spring-boot:run
 |---|---|
 | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | 数据源 |
 | `BLOG_ADMIN_PASSWORD` | 初始管理员密码（仅首次启动建号用） |
-| `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 对象存储连接信息（也可启动后在后台「站点设置」配置，站点设置优先） |
 
-激活方式：`--spring.profiles.active=prod`。
+激活方式：`--spring.profiles.active=prod`。文件存储等运行参数不走环境变量，启动后登录后台「站点设置」配置。
 
 ## 常用开发说明
 
 - 数据库变更一律走 Flyway 迁移脚本（`src/main/resources/db/migration/`），禁止手改已合并的脚本
-- 运行参数（评论策略、站点地址、存储、AI 等）一律走后台「站点设置」，不新增 yml 配置；`blog.*` 仅保留启动期必要项与存储兜底默认值
+- 运行参数（评论策略、站点地址、文件存储、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期必要项（初始管理员）
 - 后台新接口必须声明 `@Perm`（裸 `@Perm` = 仅需登录），否则该接口一律 403；权限码由启动扫描自动登记
 - 本地日志输出到 `logs/forever-server.log`（已在 .gitignore 中）
 - 定时任务（RSS 抓取）默认每 6 小时一次，可通过 `blog.rss.fetch-interval-ms` 等配置覆盖

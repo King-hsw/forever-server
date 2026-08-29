@@ -13,20 +13,8 @@ blog:
     username: admin
     # 仅在 sys_user 表为空时用于初始化管理员
     password: <管理员初始密码>
-  # 文件存储（上传的头像/动态媒体）：统一写 S3 兼容对象存储（RustFS）。
-  # 站点设置（后台 → 存储，storage.*）优先于本文件；两端都未配置时上传/下载报"配置不完整"。
-  storage:
-    endpoint: http://localhost:9000
-    access-key: rustfsadmin
-    secret-key: rustfsadmin
-    bucket: forever
-    # 预签名 URL 有效期（下载 302 与直传 PUT 共用），默认 15m
-    # presign-ttl: 15m
-    # 直传暂存 tmp/ 的过期天数（未发布即自动回收），默认 1
-    # tmp-expire-days: 1
-    # 公开读：匿名只读 moment/ 与 avatar/，下载跳固定直链，浏览器/CDN 缓存可长期命中（默认关闭）
-    # public-read: true
 
-# 注意：存储参数、评论策略（限流间隔/先审后显/邮件通知/收件人）与站点地址等运行参数
-# 均可在启动后登录后台「站点设置」在线调整（存 sys_site_config 表，立即生效、重启不丢），
-# 调用 PUT /api/admin/settings；yml 仅作为未在后台配置时的兜底默认值。
+# 注意：文件存储（上传的头像/动态媒体，写 S3 兼容对象存储 RustFS）、
+# 评论策略（限流间隔/先审后显/邮件通知/收件人）与站点地址等运行参数，
+# 均在启动后登录后台「站点设置」在线调整（存 sys_site_config 表，立即生效、重启不丢），
+# 调用 PUT /api/admin/settings；yml 不承载运行参数。

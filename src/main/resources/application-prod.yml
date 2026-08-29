@@ -14,23 +14,9 @@ blog:
     username: ${BLOG_ADMIN_USERNAME:admin}
     # 生产环境密码不落盘，由 AdminInitializer 首次启动时读取（缺失则初始化失败）
     password: ${BLOG_ADMIN_PASSWORD}
-  # 文件存储（S3 兼容对象存储 RustFS，唯一后端）：站点设置（storage.*，后台实时调整）优先，
-  # 以下环境变量仅作未在后台配置时的兜底默认值
-  storage:
-    endpoint: ${BLOG_STORAGE_ENDPOINT:}
-    access-key: ${BLOG_STORAGE_ACCESS_KEY:}
-    secret-key: ${BLOG_STORAGE_SECRET_KEY:}
-    bucket: ${BLOG_STORAGE_BUCKET:}
-    # 预签名下载 URL 有效期，默认 15m，可用 BLOG_STORAGE_PRESIGN_TTL 覆盖
-    presign-ttl: ${BLOG_STORAGE_PRESIGN_TTL:15m}
-    # 直传暂存前缀 tmp/ 的生命周期过期天数（未发布的直传文件自动回收），默认 1
-    tmp-expire-days: ${BLOG_STORAGE_TMP_EXPIRE_DAYS:1}
-    # 公开读（默认关闭）：对 moment/ 与 avatar/ 安装匿名只读策略，下载跳固定直链，
-    # 浏览器/CDN 缓存可长期命中；小带宽服务器建议开启。关闭后已装策略需在控制台手动删除
-    public-read: ${BLOG_STORAGE_PUBLIC_READ:false}
 
-# 评论策略、站点地址、文件存储（storage.*）等运行参数均可在后台「站点设置」（PUT /api/admin/settings）
-# 在线调整、即时生效；上面的 storage 环境变量仅在后台未配置对应项时兜底
+# 评论策略、站点地址、文件存储（storage.*）等运行参数均在后台「站点设置」（PUT /api/admin/settings）
+# 在线调整、即时生效；文件存储在后台配置完成后上传/下载才可用，未配置仅影响该功能、应用正常启动
 
 logging:
   # 路径供 logback-spring.xml 中的 springProperty 读取；滚动策略在 XML 中维护

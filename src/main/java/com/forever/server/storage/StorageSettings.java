@@ -10,8 +10,8 @@ import org.springframework.stereotype.Component;
 import java.time.Duration;
 
 /**
- * 文件存储生效配置：站点设置（sys_site_config 的 storage.*）优先，
- * 未配置的项回落 yml / 环境变量（{@link StorageProperties}），最后是内置默认值。
+ * 文件存储生效配置：统一以后台「站点设置」（sys_site_config 的 storage.*）为准，
+ * 未配置的项回落 {@link StorageProperties} 内置默认值。
  * 每次读取都取当前值——后台修改存储配置立即生效，无需重启。
  */
 @Slf4j
@@ -93,7 +93,7 @@ public class StorageSettings {
         if (isBlank(endpoint) || isBlank(accessKey) || isBlank(secretKey) || isBlank(bucket)) {
             throw new BizException(ErrorCode.INTERNAL_ERROR,
                     "对象存储配置不完整：需要 endpoint / access-key / secret-key / bucket"
-                            + "（后台站点设置 → 存储，或 yml 环境变量兜底）");
+                            + "（后台站点设置 → 存储）");
         }
         return new S3Target(endpoint, accessKey, secretKey, bucket, tmpExpireDays(), publicRead());
     }
