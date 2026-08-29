@@ -47,6 +47,7 @@ public class TokenService {
         }
         requireActiveUser(row.getUserId());
         mapper.deleteById(row.getId());
+        log.info("token rotated: uid={}", row.getUserId());
         return createPair(row.getUserId());
     }
 
@@ -65,8 +66,13 @@ public class TokenService {
 
     /** 登出：吊销该 refresh 对应的整个会话 */
     public void revokeByRefreshToken(String rawRefreshToken) {
-        if (rawRefreshToken != null && !rawRefreshToken.isBlank()) {
-            mapper.deleteByRefreshToken(sha256(rawRefreshToken));
+        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
+            return;
+        }
+        SysAuthToken row = mapper.findByRefreshToken(sha256(rawRefreshToken));
+        mapper.deleteByRefreshToken(sha256(rawRefreshToken));
+        if (row != null) {
+            log.info("token revoked (logout): uid={}", row.getUserId());
         }
     }
 

@@ -44,8 +44,4 @@
     <update id="updateAvatarUrl">
         UPDATE sys_user SET avatar_url = #{avatarUrl} WHERE id = #{id}
     </update>
-
-    <update id="updateNickname">
-        UPDATE sys_user SET nickname = #{nickname} WHERE id = #{id}
-    </update>
 </mapper>

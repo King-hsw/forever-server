@@ -62,9 +62,20 @@ public class AdminMomentController {
     }
 
     @Perm("moment:post")
-    @Operation(summary = "上传媒体", description = """
+    @Operation(summary = "申请直传地址", description = """
+            前端拿 url 后以 PUT 携带 contentType 请求头直传文件体到对象存储，不经服务端中转；
+            发布动态时把返回的 key 填入 images / audio / video 字段完成收口。
+            未发布的直传对象由桶生命周期规则（storage.tmp-expire-days，默认 1 天）自动清理。""")
+    @PostMapping("/upload/presign")
+    public ApiResponse<MomentDtos.PresignUploadResponse> presign(
+            @Valid @RequestBody MomentDtos.PresignUploadRequest request) {
+        return ApiResponse.ok(momentService.presignUpload(request.contentType()));
+    }
+
+    @Perm("moment:post")
+    @Operation(summary = "上传媒体（服务端中转）", description = """
             multipart 字段名 file；图片 jpg/png/webp/gif ≤5MB，音频 mp3/m4a/wav ≤20MB，视频 mp4/webm ≤100MB；
-            返回 {url:"/uploads/moment/{yyyy/MM}/{uuid}.{ext}"}""")
+            返回 {url:"/uploads/moment/{yyyy/MM}/{uuid}.{ext}"}。大文件建议改走直传（/upload/presign）""")
     @PostMapping("/upload")
     public ApiResponse<MomentDtos.UploadResponse> upload(
             Authentication authentication, @RequestParam("file") MultipartFile file) {

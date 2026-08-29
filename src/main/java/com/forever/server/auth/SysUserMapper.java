@@ -28,6 +28,4 @@ public interface SysUserMapper {
                       @Param("email") String email, @Param("site") String site);
 
     int updateAvatarUrl(@Param("id") Long id, @Param("avatarUrl") String avatarUrl);
-
-    int updateNickname(@Param("id") Long id, @Param("nickname") String nickname);
 }

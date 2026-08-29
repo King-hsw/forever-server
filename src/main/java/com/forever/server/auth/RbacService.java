@@ -117,6 +117,7 @@ public class RbacService {
     public void resetPassword(Long uid, String rawPassword) {
         requireUser(uid);
         sysUserMapper.updatePassword(uid, passwordEncoder.encode(rawPassword));
+        log.info("password reset by admin: uid={}", uid);
     }
 
     public void assignRoles(Long uid, List<Long> roleIds) {
@@ -126,6 +127,7 @@ public class RbacService {
             roleIds.forEach(roleId -> rbacMapper.insertUserRole(uid, requireRole(roleId).getId()));
         }
         evict(uid);
+        log.info("roles assigned: uid={}, roleIds={}", uid, roleIds);
     }
 
     // ---------- 角色管理 ----------
@@ -165,6 +167,7 @@ public class RbacService {
         role.setName(name);
         role.setRemark(remark);
         rbacMapper.insertRole(role);
+        log.info("role created: id={}, code={}", role.getId(), code);
         return role;
     }
 
@@ -178,6 +181,7 @@ public class RbacService {
         }
         rbacMapper.deleteRole(roleId);
         evict(null);
+        log.info("role deleted: id={}, code={}", roleId, role.getCode());
     }
 
     public List<SysPermission> listPermissions() {

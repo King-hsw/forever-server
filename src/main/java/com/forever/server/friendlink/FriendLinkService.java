@@ -10,6 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 
+/**
+ * 友链业务：访客申请（PENDING，站点地址去重）→ 管理端审核通过/驳回；
+ * 管理端也可直接创建（创建即 APPROVED）。前台仅展示审核通过的友链。
+ */
 @Slf4j
 @Service
 public class FriendLinkService {

@@ -15,6 +15,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 文章核心业务：管理端 CRUD / 发布下线 / 软删除，公开端列表、归档与详情。
+ * <p>
+ * slug 全局唯一：请求未指定时从标题提取语义化 slug（见 {@link SlugGenerator}），冲突加随机后缀重试；
+ * 标签多对多关系随保存整体重建；分类/标签引用合法性在写入前校验。
+ * 浏览量在公开详情访问时自增（{@link #detailPublic}）。
+ */
 @Slf4j
 @Service
 public class ArticleService {

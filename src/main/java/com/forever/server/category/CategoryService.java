@@ -8,6 +8,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 分类管理：名称唯一，slug 缺省随机生成；分类下仍有文章时禁止删除（防悬挂引用），
+ * 列表携带各分类已发布文章数供前台展示。
+ */
 @Slf4j
 @Service
 public class CategoryService {

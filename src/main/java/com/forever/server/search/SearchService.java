@@ -4,6 +4,7 @@ import com.forever.server.article.Article;
 import com.forever.server.article.ArticleMapper;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
 
@@ -11,6 +12,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 全局搜索：MySQL LIKE 模糊匹配已发布文章的标题/摘要/正文（V14 索引表，见 SearchMapper），
+ * 命中词带 HTML 高亮片段（转义后插 <em>，前端可安全 v-html）。
+ */
+@Slf4j
 @Service
 public class SearchService {
 
@@ -54,6 +60,8 @@ public class SearchService {
                         tagsByArticle.getOrDefault(r.id(), List.of()), r.createdAt(),
                         buildHighlights(r, kw)))
                 .toList();
+        // 搜索词是运营数据：记录访客在搜什么、命中率如何（个人博客流量小，info 一行开销可忽略）
+        log.info("article searched: keyword=\"{}\", hits={}, page={}", kw, total, page);
         return PageResult.of(items, total, page, size);
     }
 

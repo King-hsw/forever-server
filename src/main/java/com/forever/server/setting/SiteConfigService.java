@@ -3,10 +3,12 @@ package com.forever.server.setting;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -48,6 +50,23 @@ public class SiteConfigService {
     /** 高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null） */
     public static final String MOMENTS_AMAP_KEY = "moments.amapKey";
 
+    // ---------- 文件存储（RustFS 对象存储；未配置的项回落 yml/环境变量，见 StorageSettings） ----------
+
+    /** 对象存储的 S3 API 地址（必填），如 http://127.0.0.1:9000 */
+    public static final String STORAGE_ENDPOINT = "storage.endpoint";
+    /** 对象存储访问密钥（必填） */
+    public static final String STORAGE_ACCESS_KEY = "storage.access-key";
+    /** 对象存储秘密密钥（必填） */
+    public static final String STORAGE_SECRET_KEY = "storage.secret-key";
+    /** 存储桶名（必填），缺失时首次使用自动创建 */
+    public static final String STORAGE_BUCKET = "storage.bucket";
+    /** 预签名 URL 有效期（下载 302 与直传 PUT 共用），如 15m / PT15M，默认 15m */
+    public static final String STORAGE_PRESIGN_TTL = "storage.presign-ttl";
+    /** 直传暂存前缀 tmp/ 的生命周期过期天数（未发布自动回收），默认 1 */
+    public static final String STORAGE_TMP_EXPIRE_DAYS = "storage.tmp-expire-days";
+    /** 公开读：匿名只读 moment/ 与 avatar/，下载跳固定直链（默认关闭） */
+    public static final String STORAGE_PUBLIC_READ = "storage.public-read";
+
     /** 已知配置项元数据：key -> 中文说明（新增可调参数在这里登记） */
     private static final Map<String, String> KNOWN_KEYS = Map.ofEntries(
             Map.entry(COMMENT_POST_INTERVAL_SECONDS, "同一 IP 发表评论的最小间隔（秒），0 表示不限流"),
@@ -64,12 +83,23 @@ public class SiteConfigService {
             Map.entry(AI_API_KEY, "AI 服务的 API Key（OpenAI 兼容接口）"),
             Map.entry(AI_BASE_URL, "AI 服务地址（OpenAI 兼容接口，默认 https://api.openai.com）"),
             Map.entry(AI_MODEL, "AI 模型名（如 gpt-4o-mini / deepseek-chat，默认 gpt-4o-mini）"),
-            Map.entry(MOMENTS_AMAP_KEY, "高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null）")
+            Map.entry(MOMENTS_AMAP_KEY, "高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null）"),
+            Map.entry(STORAGE_ENDPOINT, "对象存储 S3 API 地址（必填），如 http://127.0.0.1:9000"),
+            Map.entry(STORAGE_ACCESS_KEY, "对象存储 Access Key（必填）"),
+            Map.entry(STORAGE_SECRET_KEY, "对象存储 Secret Key（必填）"),
+            Map.entry(STORAGE_BUCKET, "存储桶名（必填），缺失时首次使用自动创建"),
+            Map.entry(STORAGE_PRESIGN_TTL, "预签名 URL 有效期（下载 302 与直传 PUT 共用），如 15m 或 PT15M，默认 15m"),
+            Map.entry(STORAGE_TMP_EXPIRE_DAYS, "直传暂存 tmp/ 的过期天数（未发布自动回收），默认 1"),
+            Map.entry(STORAGE_PUBLIC_READ, "公开读：匿名只读 moment/ 与 avatar/，下载跳固定直链便于浏览器/CDN 缓存；"
+                    + "修改后首次使用时幂等安装桶策略，关闭后已装策略需在对象存储控制台手动删除（true/false）")
     );
 
     private final SiteConfigMapper mapper;
     /** key -> 当前生效值的内存缓存 */
     private final Map<String, String> cache = new ConcurrentHashMap<>();
+    /** 值为密钥的配置项：更新日志中需脱敏，避免明文入日志文件 */
+    private static final Set<String> SENSITIVE_KEYS = Set.of(
+            STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, AI_API_KEY);
 
     public SiteConfigService(SiteConfigMapper mapper) {
         this.mapper = mapper;
@@ -173,7 +203,8 @@ public class SiteConfigService {
             } catch (NumberFormatException e) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "配置值必须为整数");
             }
-        } else if (key.equals(COMMENT_AUTO_APPROVE) || key.equals(COMMENT_NOTIFY_MAIL) || key.equals(AI_SUMMARY_ENABLED)) {
+        } else if (key.equals(COMMENT_AUTO_APPROVE) || key.equals(COMMENT_NOTIFY_MAIL)
+                || key.equals(AI_SUMMARY_ENABLED) || key.equals(STORAGE_PUBLIC_READ)) {
             if (!"true".equalsIgnoreCase(trimmed) && !"false".equalsIgnoreCase(trimmed)) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "布尔型配置只接受 true/false");
             }
@@ -186,11 +217,29 @@ public class SiteConfigService {
             throw new BizException(ErrorCode.BAD_REQUEST, "站点地址必须以 http:// 或 https:// 开头");
         } else if (key.equals(SITE_BIRTH_DATE) && !trimmed.isEmpty() && !trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "建站日期格式必须为 yyyy-MM-dd");
+        } else if (key.equals(STORAGE_ENDPOINT)
+                && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "S3 地址必须以 http:// 或 https:// 开头");
+        } else if (key.equals(STORAGE_PRESIGN_TTL)) {
+            try {
+                DurationStyle.detectAndParse(trimmed);
+            } catch (IllegalArgumentException e) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "有效期格式不正确，如 15m / 30s / PT15M");
+            }
+        } else if (key.equals(STORAGE_TMP_EXPIRE_DAYS)) {
+            try {
+                if (Integer.parseInt(trimmed) < 1) {
+                    throw new BizException(ErrorCode.BAD_REQUEST, "过期天数必须 >= 1");
+                }
+            } catch (NumberFormatException e) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "过期天数必须为整数");
+            }
         }
 
         mapper.upsert(key, trimmed);
         cache.put(key, trimmed);
-        log.info("site config updated: {}={}", key, trimmed);
+        // 密钥类配置只记 key 不记值，防止 access-key / secret-key / api-key 泄露到日志
+        log.info("site config updated: {}={}", key, SENSITIVE_KEYS.contains(key) ? "***" : trimmed);
         return new SettingDtos.SettingResponse(key, trimmed, KNOWN_KEYS.get(key));
     }
 }

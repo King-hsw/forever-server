@@ -7,10 +7,6 @@
         SELECT * FROM sys_site_config ORDER BY config_key
     </select>
 
-    <select id="findByKey" resultType="com.forever.server.setting.SiteConfig">
-        SELECT * FROM sys_site_config WHERE config_key = #{key}
-    </select>
-
     <insert id="upsert">
         INSERT INTO sys_site_config (config_key, config_value) VALUES (#{key}, #{value})
         ON CONFLICT (config_key) DO UPDATE

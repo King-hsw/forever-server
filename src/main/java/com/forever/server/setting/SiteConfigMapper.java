@@ -10,7 +10,5 @@ public interface SiteConfigMapper {
 
     List<SiteConfig> findAll();
 
-    SiteConfig findByKey(@Param("key") String key);
-
     int upsert(@Param("key") String key, @Param("value") String value);
 }

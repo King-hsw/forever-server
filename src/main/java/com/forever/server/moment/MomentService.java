@@ -2,7 +2,6 @@ package com.forever.server.moment;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.forever.server.auth.ProfileService;
 import com.forever.server.auth.RbacService;
 import com.forever.server.auth.SysUser;
 import com.forever.server.auth.SysUserMapper;
@@ -13,6 +12,7 @@ import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
 import com.forever.server.setting.SiteConfigService;
+import com.forever.server.storage.StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,17 +25,16 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -69,11 +68,21 @@ public class MomentService {
             .connectTimeout(Duration.ofSeconds(5))
             .build();
 
+    /** 直传暂存 key 校验：tmp/{yyyy/MM}/{32位uuid}.{白名单扩展名}，防伪造任意对象收口 */
+    private static final Pattern TMP_KEY = Pattern.compile("^tmp/\\d{4}/\\d{2}/[0-9a-f]{32}\\.(?:"
+            + EXT_BY_CONTENT_TYPE.values().stream()
+                    .map(ext -> ext.substring(1))
+                    .collect(Collectors.joining("|"))
+            + ")$");
+
+    static final DateTimeFormatter FORMATTER_YYYY_MM = DateTimeFormatter.ofPattern("yyyy/MM");
+
     private final MomentMapper momentMapper;
     private final SysUserMapper sysUserMapper;
     private final CommentMapper commentMapper;
     private final RbacService rbacService;
     private final SiteConfigService siteConfig;
+    private final StorageService storage;
     /** 仅用于 media JSON 存取；Spring Boot 4 自动装配的是 Jackson 3，这里用 classpath 自带的 Jackson 2 */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -81,12 +90,14 @@ public class MomentService {
                          SysUserMapper sysUserMapper,
                          CommentMapper commentMapper,
                          RbacService rbacService,
-                         SiteConfigService siteConfig) {
+                         SiteConfigService siteConfig,
+                         StorageService storage) {
         this.momentMapper = momentMapper;
         this.sysUserMapper = sysUserMapper;
         this.commentMapper = commentMapper;
         this.rbacService = rbacService;
         this.siteConfig = siteConfig;
+        this.storage = storage;
     }
 
     // ---------- 公开端 ----------
@@ -137,12 +148,33 @@ public class MomentService {
 
     // ---------- 管理端 ----------
 
+    /**
+     * 申请直传地址：按 Content-Type 白名单生成 tmp/{yyyy/MM}/{uuid}.{ext} key，
+     * 签发限时 PUT URL；前端直传后把 key 回传给 create 收口为正式对象。
+     */
+    public MomentDtos.PresignUploadResponse presignUpload(String contentTypeRaw) {
+        String contentType = normalizeContentType(contentTypeRaw);
+        String ext = EXT_BY_CONTENT_TYPE.get(contentType);
+        if (ext == null) {
+            throw new BizException(ErrorCode.BAD_REQUEST,
+                    "仅支持 jpg / png / webp / gif 图片、mp3 / m4a / wav 音频、mp4 / webm 视频");
+        }
+        String key = "tmp/" + FORMATTER_YYYY_MM.format(YearMonth.now())
+                + "/" + UUID.randomUUID().toString().replace("-", "") + ext;
+        String url = storage.presignPutUrl(key, contentType, storage.presignTtl());
+        log.debug("presigned upload: key={}, contentType={}, ttl={}s", key, contentType,
+                storage.presignTtl().toSeconds());
+        return new MomentDtos.PresignUploadResponse(
+                url, key, contentType, storage.presignTtl().toSeconds());
+    }
+
     public MomentResponse create(long uid, MomentCreateRequest request) {
         String content = Strings.blankToNull(request.content());
         List<String> images = request.images() == null ? List.of()
-                : request.images().stream().map(Strings::blankToNull).filter(u -> u != null).toList();
-        String audio = Strings.blankToNull(request.audio());
-        String video = Strings.blankToNull(request.video());
+                : request.images().stream().map(Strings::blankToNull).filter(u -> u != null)
+                        .map(this::resolveMedia).toList();
+        String audio = resolveMedia(Strings.blankToNull(request.audio()));
+        String video = resolveMedia(Strings.blankToNull(request.video()));
         if (images.size() > MAX_IMAGES) {
             throw new BizException(ErrorCode.BAD_REQUEST, "图片最多 9 张");
         }
@@ -184,6 +216,7 @@ public class MomentService {
     public MomentDtos.LikeResponse like(long uid, Long momentId) {
         requireExists(momentId);
         momentMapper.insertLike(momentId, uid);
+        log.debug("moment liked: momentId={}, uid={}", momentId, uid);
         return new MomentDtos.LikeResponse(momentMapper.countLikes(momentId), true);
     }
 
@@ -191,12 +224,13 @@ public class MomentService {
     public MomentDtos.LikeResponse unlike(long uid, Long momentId) {
         requireExists(momentId);
         momentMapper.deleteLike(momentId, uid);
+        log.debug("moment unliked: momentId={}, uid={}", momentId, uid);
         return new MomentDtos.LikeResponse(momentMapper.countLikes(momentId), false);
     }
 
     /**
-     * 媒体上传：按 Content-Type 白名单校验，落盘 data/uploads/moment/{yyyy/MM}/{uuid}.{ext}，
-     * 返回 /uploads/moment/... 访问地址（WebConfig 静态映射）。
+     * 媒体上传：按 Content-Type 白名单校验，存为 moment/{yyyy/MM}/{uuid}.{ext}，
+     * 返回 /uploads/moment/... 访问地址（统一写入对象存储，读取时 302）。
      */
     public MomentDtos.UploadResponse upload(MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -212,18 +246,17 @@ public class MomentService {
             throw new BizException(ErrorCode.BAD_REQUEST, "文件大小超出限制");
         }
         YearMonth yearMonth = YearMonth.now();
-        String name = UUID.randomUUID().toString().replace("-", "") + ext;
-        String relative = "moment/" + yearMonth.format(java.time.format.DateTimeFormatter.ofPattern("yyyy/MM"))
-                + "/" + name;
-        Path target = ProfileService.UPLOAD_ROOT.resolve(relative);
+        String relative = "moment/" + FORMATTER_YYYY_MM.format(yearMonth)
+                + "/" + UUID.randomUUID().toString().replace("-", "") + ext;
+        String url;
         try {
-            Files.createDirectories(target.getParent());
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            url = storage.save(relative, contentType, file.getInputStream(), file.getSize());
         } catch (IOException e) {
             log.error("保存动态媒体失败: {}", relative, e);
             throw new BizException(ErrorCode.INTERNAL_ERROR, "文件保存失败");
         }
-        return new MomentDtos.UploadResponse("/uploads/" + relative);
+        log.info("moment media uploaded: url={}, size={}B", url, file.getSize());
+        return new MomentDtos.UploadResponse(url);
     }
 
     /**
@@ -244,6 +277,8 @@ public class MomentService {
                     HttpResponse.BodyHandlers.ofString());
             JsonNode root = objectMapper.readTree(resp.body());
             if (!"1".equals(root.path("status").asText())) {
+                // 高德业务失败（配额超限/参数问题等），info 字段带原因；对前端表现为无地点
+                log.debug("amap regeo rejected: info={}", root.path("info").asText());
                 return new MomentDtos.GeocodeResponse(null);
             }
             JsonNode comp = root.path("regeocode").path("addressComponent");
@@ -258,6 +293,43 @@ public class MomentService {
     }
 
     // ---------- internal ----------
+
+    /**
+     * 兼容两种媒体入参：正式 /uploads/moment/... 地址原样保留（服务端中转上传的历史流程）；
+     * tmp/ 开头的直传 key 收口为正式对象——HeadObject 复核类型与大小，
+     * CopyObject 到 moment/{yyyy/MM}/{uuid}.{ext} 后删除暂存对象。
+     */
+    private String resolveMedia(String value) {
+        if (value == null || !value.startsWith(StorageService.TMP_PREFIX)) {
+            return value;
+        }
+        if (!TMP_KEY.matcher(value).matches()) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "非法的直传文件标识: " + value);
+        }
+        StorageService.Stat stat = storage.stat(value);
+        if (stat == null) {
+            throw new BizException(ErrorCode.NOT_FOUND, "直传文件不存在或已过期，请重新上传");
+        }
+        String contentType = normalizeContentType(stat.contentType());
+        String ext = EXT_BY_CONTENT_TYPE.get(contentType);
+        if (ext == null) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "直传文件类型不在支持范围内");
+        }
+        if (stat.size() > maxBytesFor(contentType)) {
+            throw new BizException(ErrorCode.BAD_REQUEST, "直传文件大小超出限制");
+        }
+        String relative = "moment/" + FORMATTER_YYYY_MM.format(YearMonth.now())
+                + "/" + UUID.randomUUID().toString().replace("-", "") + ext;
+        storage.copy(value, relative, contentType);
+        storage.delete(value);
+        log.info("moment media finalized: {} -> {}", value, relative);
+        return StorageService.urlOf(relative);
+    }
+
+    /** MIME 归一化：去参数、转小写，如 "image/png; charset=x" -> "image/png" */
+    private static String normalizeContentType(String contentType) {
+        return contentType == null ? "" : contentType.split(";")[0].trim().toLowerCase();
+    }
 
     private static long maxBytesFor(String contentType) {
         if (contentType.startsWith("image/")) {

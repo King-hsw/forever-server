@@ -25,6 +25,12 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
+/**
+ * 评论核心业务：一套 Comment 表支撑三种目标（target_type = ARTICLE / BOARD / MOMENT），
+ * 组装两层楼（根评论倒序、楼内回复正序）。游客发评要求昵称+邮箱，登录用户在动态下
+ * 自动以 sys_user 资料身份发言；写入前做敏感词替换（{@link SensitiveWordService#mask}），
+ * 是否直接过审、同 IP 发评间隔均由站点设置控制；落库后触发邮件通知（失败不影响评论）。
+ */
 @Slf4j
 @Service
 public class CommentService {

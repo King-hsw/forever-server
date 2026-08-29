@@ -8,6 +8,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+/**
+ * 登录认证：用户名密码校验 + 签发双 Token（见 {@link TokenService}）。
+ * 登录成败均写入审计日志（action_log），供后台「审计日志」页追溯。
+ */
 @Slf4j
 @Service
 public class AuthService {
@@ -39,6 +43,7 @@ public class AuthService {
             throw new BizException(ErrorCode.UNAUTHORIZED, "用户名或密码错误");
         }
         if (!"ACTIVE".equals(user.getStatus())) {
+            log.warn("login rejected: account disabled, username={}, ip={}", request.username(), ip);
             actionLogService.record(request.username(), "POST", LOGIN_PATH, 403, ip, null);
             throw new BizException(ErrorCode.FORBIDDEN, "账号已被禁用");
         }

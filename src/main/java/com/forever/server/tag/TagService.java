@@ -7,6 +7,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+/**
+ * 标签管理：名称唯一；删除时先清文章-标签关联再删标签，避免悬挂外键，
+ * 列表携带各标签已发布文章数供前台展示。
+ */
 @Slf4j
 @Service
 public class TagService {
