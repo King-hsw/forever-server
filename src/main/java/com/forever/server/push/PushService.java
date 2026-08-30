@@ -33,17 +33,16 @@ public class PushService {
     private final PushSubscriptionMapper mapper;
     private final SysUserMapper sysUserMapper;
     private final PushVapidProperties vapid;
-    private final ObjectMapper objectMapper;
+    /** 仅序列化三字段载荷，直接实例化（同 MomentService）；Boot 4 自动配置的 ObjectMapper 是 Jackson 3 类型，注入不到 */
+    private final ObjectMapper objectMapper = new ObjectMapper();
     /** web-push 发送器；VAPID 未配置时为 null，代表推送功能关闭。
      *  库类与业务类同名，用全限定名引用 */
     private final nl.martijndwars.webpush.PushService sender;
 
-    public PushService(PushSubscriptionMapper mapper, SysUserMapper sysUserMapper,
-                       PushVapidProperties vapid, ObjectMapper objectMapper) {
+    public PushService(PushSubscriptionMapper mapper, SysUserMapper sysUserMapper, PushVapidProperties vapid) {
         this.mapper = mapper;
         this.sysUserMapper = sysUserMapper;
         this.vapid = vapid;
-        this.objectMapper = objectMapper;
         nl.martijndwars.webpush.PushService pusher = null;
         if (vapid.isConfigured()) {
             try {
