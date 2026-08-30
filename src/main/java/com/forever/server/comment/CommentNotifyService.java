@@ -1,5 +1,9 @@
 package com.forever.server.comment;
 
+import com.forever.server.auth.SysUser;
+import com.forever.server.auth.SysUserMapper;
+import com.forever.server.config.BlogProperties;
+import com.forever.server.push.PushService;
 import com.forever.server.setting.SiteConfigService;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
@@ -10,9 +14,9 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 /**
- * 评论邮件通知。
+ * 评论通知：邮件与 Web Push 双通道，同一开关（comment.notifyMail）控制。
  * 设计原则：通知失败绝不影响评论本身——
- * 未开启开关、未配置 SMTP、发送异常都只记日志。
+ * 未开启开关、未配置 SMTP/VAPID、发送异常都只记日志。
  */
 @Slf4j
 @Service
@@ -20,25 +24,37 @@ public class CommentNotifyService {
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
     private final SiteConfigService siteConfig;
+    private final PushService pushService;
+    private final SysUserMapper sysUserMapper;
+    private final BlogProperties blogProperties;
 
-    public CommentNotifyService(ObjectProvider<JavaMailSender> mailSenderProvider, SiteConfigService siteConfig) {
+    public CommentNotifyService(ObjectProvider<JavaMailSender> mailSenderProvider, SiteConfigService siteConfig,
+                                PushService pushService, SysUserMapper sysUserMapper, BlogProperties blogProperties) {
         this.mailSenderProvider = mailSenderProvider;
         this.siteConfig = siteConfig;
+        this.pushService = pushService;
+        this.sysUserMapper = sysUserMapper;
+        this.blogProperties = blogProperties;
     }
 
     /**
-     * 评论落库后的通知：
-     * - 回复他人 -> 通知被回复者
-     * - 新的根评论 -> 若配置了 blog.comment.owner-email 则通知站长
+     * 评论落库后的通知（邮件 + Web Push）：
+     * - 回复他人 -> 通知被回复者（邮件按其邮箱；推送命中以该邮箱绑定的订阅）
+     * - 新的根评论 -> 通知站长（邮件按 owner-email 配置；推送按站长账号名下的订阅）
      */
-    public void onCommentCreated(Comment comment, Comment parent, String articleTitle) {
+    public void onCommentCreated(Comment comment, Comment parent, String articleTitle, String sourceUrl) {
         if (!enabled()) {
             return;
         }
         try {
             if (parent != null) {
+                String summary = "你在《%s》下的评论收到了 %s 的回复：%s".formatted(
+                        articleTitle, comment.getNickname(), excerpt(comment.getContent()));
                 send(parent.getEmail(), "你的评论收到了新回复", buildReplyBody(parent, comment, articleTitle));
+                pushService.sendToEmail(parent.getEmail(), "你的评论收到了新回复", summary, sourceUrl);
             } else if (ownerEmail() != null && !ownerEmail().equalsIgnoreCase(comment.getEmail())) {
+                String summary = "《%s》收到新评论：%s：%s".formatted(
+                        articleTitle, comment.getNickname(), excerpt(comment.getContent()));
                 send(ownerEmail(), "博客有新的评论",
                         """
                         《%s》收到新评论：
@@ -47,10 +63,23 @@ public class CommentNotifyService {
                         内容：%s
 
                         请登录后台查看与回复。""".formatted(articleTitle, comment.getNickname(), comment.getContent()));
+                Long ownerUid = ownerUid();
+                if (ownerUid != null) {
+                    pushService.sendToUser(ownerUid, "博客有新的评论", summary, sourceUrl);
+                }
             }
         } catch (Exception e) {
             log.warn("comment notify failed: commentId={}, reason={}", comment.getId(), e.getMessage());
         }
+    }
+
+    /** 站长账号 uid（按启动配置的管理员用户名查）；配置缺失或账号不存在返回 null，推送自然跳过 */
+    private Long ownerUid() {
+        if (blogProperties.admin() == null || blogProperties.admin().username() == null) {
+            return null;
+        }
+        SysUser owner = sysUserMapper.findByUsername(blogProperties.admin().username());
+        return owner == null ? null : owner.getId();
     }
 
     private boolean enabled() {
@@ -59,6 +88,12 @@ public class CommentNotifyService {
 
     private String ownerEmail() {
         return siteConfig.getString(SiteConfigService.COMMENT_OWNER_EMAIL, null);
+    }
+
+    /** 推送正文用摘要：压平换行并截断，通知里看不完整内容，点击进页面 */
+    private static String excerpt(String content) {
+        String flat = content.replaceAll("\\s+", " ").trim();
+        return flat.length() <= 80 ? flat : flat.substring(0, 80) + "…";
     }
 
     private String buildReplyBody(Comment parent, Comment reply, String articleTitle) {

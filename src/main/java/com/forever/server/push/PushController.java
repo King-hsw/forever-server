@@ -35,10 +35,10 @@ public class PushController {
         return ApiResponse.ok(Map.of("publicKey", service.publicKey()));
     }
 
-    @Operation(summary = "保存推送订阅", description = "按 endpoint 幂等 upsert，浏览器重新生成密钥时以新值覆盖")
+    @Operation(summary = "保存推送订阅", description = "按 endpoint 幂等 upsert；登录用户绑定 sys_user 资料邮箱，游客可上报邮箱（评论成功后）")
     @PostMapping("/subscribe")
     public ApiResponse<Void> subscribe(@Valid @RequestBody PushSubscribeRequest request) {
-        service.subscribe(request.endpoint(), request.keys().p256dh(), request.keys().auth(), currentUid());
+        service.subscribe(request, currentPrincipal());
         return ApiResponse.ok();
     }
 
@@ -62,9 +62,9 @@ public class PushController {
         return ApiResponse.ok(service.deliveredSummary());
     }
 
-    /** 带登录态订阅时返回当前用户 id，游客返回 null */
-    private static Long currentUid() {
+    /** 带登录态订阅时返回当前用户，游客返回 null */
+    private static AuthPrincipal currentPrincipal() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
-        return auth != null && auth.getPrincipal() instanceof AuthPrincipal principal ? principal.uid() : null;
+        return auth != null && auth.getPrincipal() instanceof AuthPrincipal principal ? principal : null;
     }
 }

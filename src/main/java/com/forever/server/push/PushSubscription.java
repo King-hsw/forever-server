@@ -19,6 +19,8 @@ public class PushSubscription {
     private String auth;
     /** 绑定的登录用户；游客订阅为 null */
     private Long userId;
+    /** 归属邮箱：登录用户取 sys_user.email，游客在评论成功后上报；定向推送（评论回复）按此命中 */
+    private String email;
     private LocalDateTime addedAt;
     private LocalDateTime lastSentAt;
     private LocalDateTime lastDeliveredAt;

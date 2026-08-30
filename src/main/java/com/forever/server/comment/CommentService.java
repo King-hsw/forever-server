@@ -140,12 +140,14 @@ public class CommentService {
         if (article == null || article.getStatus() != ArticleStatus.PUBLISHED) {
             throw new BizException(ErrorCode.NOT_FOUND, "文章不存在");
         }
-        return doCreate(TARGET_ARTICLE, request.articleId(), article.getTitle(), request, ip, visitorIdentity(request));
+        return doCreate(TARGET_ARTICLE, request.articleId(), article.getTitle(), "/posts/" + article.getSlug(),
+                request, ip, visitorIdentity(request));
     }
 
     /** 发表留言板留言（不关联文章） */
     public CommentAdminResponse createBoard(CommentCreateRequest request, String ip) {
-        return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), request, ip, visitorIdentity(request));
+        return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), "/chat",
+                request, ip, visitorIdentity(request));
     }
 
     /** 发表动态评论：登录用户（viewerUid 非空）自动以其 sys_user 资料身份发布，邮箱可为空 */
@@ -154,10 +156,11 @@ public class CommentService {
             throw new BizException(ErrorCode.NOT_FOUND, "动态不存在");
         }
         Identity identity = viewerUid != null ? userIdentity(viewerUid) : visitorIdentity(request);
-        return doCreate(TARGET_MOMENT, momentId, "动态 #" + momentId, request, ip, identity);
+        return doCreate(TARGET_MOMENT, momentId, "动态 #" + momentId, "/moments",
+                request, ip, identity);
     }
 
-    private CommentAdminResponse doCreate(String targetType, long targetId, String sourceTitle,
+    private CommentAdminResponse doCreate(String targetType, long targetId, String sourceTitle, String sourceUrl,
                                           CommentCreateRequest request, String ip, Identity identity) {
         throttle(ip);
 
@@ -192,7 +195,7 @@ public class CommentService {
                 comment.getId(), targetType, comment.getParentId(), comment.getStatus(), ip);
 
         // 通知失败不影响已落库的评论（notify 内部自捕获异常）
-        notifyService.onCommentCreated(comment, parent, sourceTitle);
+        notifyService.onCommentCreated(comment, parent, sourceTitle, sourceUrl);
         return toAdminResponse(comment);
     }
 

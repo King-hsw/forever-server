@@ -2,6 +2,9 @@ package com.forever.server.push;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.forever.server.auth.AuthPrincipal;
+import com.forever.server.auth.SysUser;
+import com.forever.server.auth.SysUserMapper;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import nl.martijndwars.webpush.Encoding;
@@ -28,14 +31,17 @@ public class PushService {
     private static final int TTL_SECONDS = 3600;
 
     private final PushSubscriptionMapper mapper;
+    private final SysUserMapper sysUserMapper;
     private final PushVapidProperties vapid;
     private final ObjectMapper objectMapper;
     /** web-push 发送器；VAPID 未配置时为 null，代表推送功能关闭。
      *  库类与业务类同名，用全限定名引用 */
     private final nl.martijndwars.webpush.PushService sender;
 
-    public PushService(PushSubscriptionMapper mapper, PushVapidProperties vapid, ObjectMapper objectMapper) {
+    public PushService(PushSubscriptionMapper mapper, SysUserMapper sysUserMapper,
+                       PushVapidProperties vapid, ObjectMapper objectMapper) {
         this.mapper = mapper;
+        this.sysUserMapper = sysUserMapper;
         this.vapid = vapid;
         this.objectMapper = objectMapper;
         nl.martijndwars.webpush.PushService pusher = null;
@@ -57,15 +63,30 @@ public class PushService {
         return vapid.publicKey();
     }
 
-    /** 保存订阅：按 endpoint 幂等，浏览器重新生成密钥时以新值覆盖 */
-    public void subscribe(String endpoint, String p256dh, String auth, Long userId) {
+    /**
+     * 保存订阅：按 endpoint 幂等，浏览器重新生成密钥时以新值覆盖。
+     * 归属解析：登录用户以 sys_user 资料为准（uid + 资料邮箱都记，评论回复按邮箱命中）；
+     * 游客取请求上报的邮箱（评论成功后上报），无则两者皆空。
+     */
+    public void subscribe(PushSubscribeRequest request, AuthPrincipal principal) {
+        Long userId = null;
+        String email = request.email();
+        if (principal != null) {
+            SysUser user = sysUserMapper.findByUsername(principal.username());
+            if (user != null) {
+                userId = user.getId();
+                email = user.getEmail();
+            }
+        }
         var sub = new PushSubscription();
-        sub.setEndpoint(endpoint);
-        sub.setP256dh(p256dh);
-        sub.setAuth(auth);
+        sub.setEndpoint(request.endpoint());
+        sub.setP256dh(request.keys().p256dh());
+        sub.setAuth(request.keys().auth());
         sub.setUserId(userId);
+        sub.setEmail(email);
         mapper.upsert(sub);
-        log.info("push subscription saved: endpointTail={}, userId={}", tail(endpoint), userId);
+        log.info("push subscription saved: endpointTail={}, userId={}, email={}",
+                tail(request.endpoint()), userId, email);
     }
 
     public void unsubscribe(String endpoint) {
@@ -79,34 +100,55 @@ public class PushService {
     }
 
     /**
-     * 向全部订阅广播一条推送。业务事件（新评论、系统消息）驱动定向发送时，
-     * 复用 {@link #sendTo(PushSubscription, String)} 即可。
-     *
-     * @return total/sent/failed 统计
+     * 向全部订阅广播一条推送（管理端测试发送用）。业务通知走
+     * {@link #sendToUser(long, String, String, String)} / {@link #sendToEmail(String, String, String, String)}。
      */
     public PushSendResult sendAll(String title, String body, String url) {
         requireConfigured();
-        List<PushSubscription> subs = mapper.findAll();
+        PushSendResult result = sendTo(mapper.findAll(), title, body, url);
+        log.info("push broadcast: total={}, sent={}, failed={}", result.total(), result.sent(), result.failed());
+        return result;
+    }
+
+    /**
+     * 定向推送：发给某登录用户名下的全部订阅（业务事件驱动，如新评论通知站长）。
+     * VAPID 未配置或无订阅时静默返回 total=0——通知失败不影响业务主流程。
+     */
+    public PushSendResult sendToUser(long userId, String title, String body, String url) {
+        return sendTo(mapper.findByUserId(userId), title, body, url);
+    }
+
+    /** 定向推送：发给某邮箱名下的全部订阅（评论回复通知被回复者用），邮箱空直接跳过 */
+    public PushSendResult sendToEmail(String email, String title, String body, String url) {
+        if (email == null || email.isBlank())
+            return new PushSendResult(0, 0, 0);
+        return sendTo(mapper.findByEmail(email), title, body, url);
+    }
+
+    private PushSendResult sendTo(List<PushSubscription> subs, String title, String body, String url) {
         if (subs.isEmpty())
             return new PushSendResult(0, 0, 0);
+        if (sender == null) {
+            log.debug("push skipped (blog.push.vapid 未配置): would notify {} subscriptions", subs.size());
+            return new PushSendResult(subs.size(), 0, 0);
+        }
 
         String payload = payload(title, body, url);
         int sent = 0;
         int failed = 0;
         for (PushSubscription sub : subs) {
-            if (sendTo(sub, payload))
+            if (deliver(sub, payload))
                 sent++;
             else
                 failed++;
         }
-        log.info("push broadcast: total={}, sent={}, failed={}", subs.size(), sent, failed);
         return new PushSendResult(subs.size(), sent, failed);
     }
 
     /**
      * 向单条订阅发送。成功记回执；404/410 视为订阅失效并从库中删除；其余失败仅计数，保留订阅下次再试。
      */
-    public boolean sendTo(PushSubscription sub, String payload) {
+    private boolean deliver(PushSubscription sub, String payload) {
         try {
             Notification notification = Notification.builder()
                     .endpoint(sub.getEndpoint())

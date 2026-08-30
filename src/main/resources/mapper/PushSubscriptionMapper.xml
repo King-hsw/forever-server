@@ -3,14 +3,16 @@
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.forever.server.push.PushSubscriptionMapper">
 
-    <!-- 保留首订时间与历史推送/送达时间，仅刷新密钥（浏览器可能重新生成）与归属用户 -->
+    <!-- 保留首订时间与历史推送/送达时间，仅刷新密钥（浏览器可能重新生成）与归属（用户/邮箱）；
+         归属字段为 null 时不覆盖已有值（已绑定用户/邮箱的订阅不会被游客上报洗掉） -->
     <insert id="upsert">
-        INSERT INTO push_subscription (endpoint, p256dh, auth, user_id)
-        VALUES (#{endpoint}, #{p256dh}, #{auth}, #{userId})
+        INSERT INTO push_subscription (endpoint, p256dh, auth, user_id, email)
+        VALUES (#{endpoint}, #{p256dh}, #{auth}, #{userId}, #{email})
         ON CONFLICT (endpoint) DO UPDATE
         SET p256dh  = EXCLUDED.p256dh,
             auth    = EXCLUDED.auth,
-            user_id = COALESCE(EXCLUDED.user_id, push_subscription.user_id)
+            user_id = COALESCE(EXCLUDED.user_id, push_subscription.user_id),
+            email   = COALESCE(EXCLUDED.email, push_subscription.email)
     </insert>
 
     <delete id="deleteByEndpoint">
@@ -19,6 +21,14 @@
 
     <select id="findAll" resultType="com.forever.server.push.PushSubscription">
         SELECT * FROM push_subscription ORDER BY added_at DESC
+    </select>
+
+    <select id="findByUserId" resultType="com.forever.server.push.PushSubscription">
+        SELECT * FROM push_subscription WHERE user_id = #{userId} ORDER BY added_at DESC
+    </select>
+
+    <select id="findByEmail" resultType="com.forever.server.push.PushSubscription">
+        SELECT * FROM push_subscription WHERE lower(email) = lower(#{email}) ORDER BY added_at DESC
     </select>
 
     <select id="countDelivered" resultType="long">
