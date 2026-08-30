@@ -19,6 +19,15 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 
+# Web Push VAPID 密钥（私密，不入 git）：实际值放 local/application-local.yml 或环境变量；
+# 三项任一缺失即推送功能关闭（/api/v1/push/vapid 与发送报 503）。生成：npx web-push generate-vapid-keys
+blog:
+  push:
+    vapid:
+      public-key: ${PUSH_VAPID_PUBLIC_KEY:}
+      private-key: ${PUSH_VAPID_PRIVATE_KEY:}
+      subject: ${PUSH_VAPID_SUBJECT:}
+
 # 日志级别与输出在 logback-spring.xml 中统一维护
 
 # 说明：blog.* 仅保留启动期必要项（admin，见 local/application-local.yml）；

@@ -13,6 +13,8 @@ public enum ErrorCode {
     FORBIDDEN(40301, HttpStatus.FORBIDDEN, "无权限"),
     NOT_FOUND(40401, HttpStatus.NOT_FOUND, "资源不存在"),
     CONFLICT(40901, HttpStatus.CONFLICT, "业务冲突"),
+    // 依赖的外部能力未配置/未就绪（如 Web Push 的 VAPID 密钥缺失），重试无意义
+    SERVICE_UNAVAILABLE(50301, HttpStatus.SERVICE_UNAVAILABLE, "功能未配置或未就绪"),
     INTERNAL_ERROR(50000, HttpStatus.INTERNAL_SERVER_ERROR, "系统内部错误");
 
     private final int code;

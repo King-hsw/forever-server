@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.push.PushSubscriptionMapper">
+
+    <!-- 保留首订时间与历史推送/送达时间，仅刷新密钥（浏览器可能重新生成）与归属用户 -->
+    <insert id="upsert">
+        INSERT INTO push_subscription (endpoint, p256dh, auth, user_id)
+        VALUES (#{endpoint}, #{p256dh}, #{auth}, #{userId})
+        ON CONFLICT (endpoint) DO UPDATE
+        SET p256dh  = EXCLUDED.p256dh,
+            auth    = EXCLUDED.auth,
+            user_id = COALESCE(EXCLUDED.user_id, push_subscription.user_id)
+    </insert>
+
+    <delete id="deleteByEndpoint">
+        DELETE FROM push_subscription WHERE endpoint = #{endpoint}
+    </delete>
+
+    <select id="findAll" resultType="com.forever.server.push.PushSubscription">
+        SELECT * FROM push_subscription ORDER BY added_at DESC
+    </select>
+
+    <select id="countDelivered" resultType="long">
+        SELECT COUNT(*) FROM push_subscription WHERE last_delivered_at IS NOT NULL
+    </select>
+
+    <select id="maxDeliveredAt" resultType="java.time.LocalDateTime">
+        SELECT MAX(last_delivered_at) FROM push_subscription
+    </select>
+
+    <update id="markDelivered">
+        UPDATE push_subscription SET last_delivered_at = #{now} WHERE endpoint = #{endpoint}
+    </update>
+
+    <update id="markSent">
+        UPDATE push_subscription SET last_sent_at = #{now} WHERE id = #{id}
+    </update>
+</mapper>
