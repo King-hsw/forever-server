@@ -10,12 +10,9 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.BucketAlreadyExistsException;
-import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
 import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
 import software.amazon.awssdk.services.s3.model.CompletedPart;
-import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
 import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.ExpirationStatus;
@@ -24,9 +21,7 @@ import software.amazon.awssdk.services.s3.model.ListPartsRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.NoSuchUploadException;
 import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-import software.amazon.awssdk.services.s3.model.PutBucketPolicyRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.UploadPartPresignRequest;
@@ -39,9 +34,10 @@ import java.util.List;
 /**
  * RustFS 存储（S3 兼容，AWS SDK v2 接入，见 docs.rustfs.com/zh/developer/sdk/java）：
  * path-style + us-east-1 是 RustFS 的固定要求。S3 客户端按 {@link StorageSettings} 的
- * 当前目标元组惰性构建——后台修改存储配置（endpoint/密钥/桶/过期天数/公开读）后，
- * 下次使用自动重建并幂等预配桶（建桶、匿名只读策略），无需重启。
- * 公开桶：前端与数据库使用直链（directUrlOf 按当前配置拼出），读取不经应用。
+ * 当前目标元组惰性构建——后台修改存储配置（endpoint/密钥/桶/直传有效期）后，
+ * 下次使用自动重建，无需重启。
+ * 应用只读写对象，不碰桶：建桶与桶策略（公开/私有）由运营在 RustFS 控制台处置，
+ * 桶需已存在且允许匿名读，直链（directUrlOf 按当前配置拼出）才能被前端直接访问。
  */
 @Slf4j
 @Service
@@ -93,7 +89,6 @@ public class RustFsStorageService implements StorageService {
                 // 预签名 URL 的 path-style 需单独开启（与 S3Client 配置对称，见 RustFS 文档）
                 .serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build())
                 .build();
-        provision(s3, target);
         Bundle built = new Bundle(target, s3, presigner);
         Bundle old = bundle;
         if (old != null) {
@@ -107,12 +102,6 @@ public class RustFsStorageService implements StorageService {
         return built;
     }
 
-    /** 桶预配：建桶、匿名只读策略（公开桶直读的前提），全部幂等且失败仅告警 */
-    private void provision(S3Client s3, StorageSettings.S3Target target) {
-        ensureBucket(s3, target.bucket());
-        ensurePublicReadPolicy(s3, target.bucket());
-    }
-
     @Override
     public String save(String relativePath, String contentType, InputStream in, long size) {
         Bundle b = bundle();
@@ -123,8 +112,6 @@ public class RustFsStorageService implements StorageService {
                             // 预签名下载时 RustFS 按存储的 Content-Type 响应，内联展示全靠它
                             .contentType(contentType == null || contentType.isBlank()
                                     ? "application/octet-stream" : contentType)
-                            // 对象级缓存策略随对象存储，公开读时浏览器/CDN 按此缓存
-                            .cacheControl(StorageService.cacheControlFor(relativePath))
                             .build(),
                     // SDK 传输完成后自动关闭输入流
                     RequestBody.fromInputStream(in, size));
@@ -244,50 +231,5 @@ public class RustFsStorageService implements StorageService {
                         .build())
                 .build());
         return presigned.url().toString();
-    }
-
-    /** 桶不存在则创建；已存在或无建桶权限仅提示，真正上传时再暴露问题 */
-    private void ensureBucket(S3Client s3, String bucket) {
-        try {
-            s3.createBucket(CreateBucketRequest.builder().bucket(bucket).build());
-            log.info("RustFS bucket 已创建: {}", bucket);
-        } catch (BucketAlreadyOwnedByYouException | BucketAlreadyExistsException e) {
-            log.debug("RustFS bucket 已存在: {}", bucket);
-        } catch (RuntimeException e) {
-            log.warn("RustFS bucket 自动创建失败（若已在控制台创建或对象存储暂不可达可忽略）: {}",
-                    e.toString());
-        }
-    }
-
-    /**
-     * 公开读：对 moment/ 与 avatar/ 前缀安装匿名只读策略（tmp/ 与列举保持私有），
-     * 下载跳固定直链后浏览器/CDN 缓存才能长期命中。幂等：策略与期望一致时不重写。
-     */
-    private void ensurePublicReadPolicy(S3Client s3, String bucket) {
-        String desired = """
-                {"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":"*",\
-                "Action":["s3:GetObject"],\
-                "Resource":["arn:aws:s3:::%s/moment/*","arn:aws:s3:::%s/avatar/*"]}]}"""
-                .formatted(bucket, bucket);
-        try {
-            String current = s3.getBucketPolicy(b -> b.bucket(bucket)).policy();
-            if (desired.equals(current)) {
-                return;
-            }
-            s3.putBucketPolicy(PutBucketPolicyRequest.builder()
-                    .bucket(bucket).policy(desired).build());
-            log.info("RustFS 公开读桶策略已安装（匿名只读 moment/ 与 avatar/，列举仍私有）");
-        } catch (S3Exception e) {
-            if (e.statusCode() == 404
-                    || (e.awsErrorDetails() != null && "NoSuchBucketPolicy".equals(e.awsErrorDetails().errorCode()))) {
-                s3.putBucketPolicy(PutBucketPolicyRequest.builder()
-                        .bucket(bucket).policy(desired).build());
-                log.info("RustFS 公开读桶策略已安装（匿名只读 moment/ 与 avatar/，列举仍私有）");
-                return;
-            }
-            log.warn("RustFS 公开读桶策略安装失败（下载将退回预签名模式）: {}", e.toString());
-        } catch (RuntimeException e) {
-            log.warn("RustFS 公开读桶策略安装失败（下载将退回预签名模式）: {}", e.toString());
-        }
     }
 }

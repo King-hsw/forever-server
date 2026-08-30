@@ -23,16 +23,24 @@ import java.util.regex.Pattern;
 @Service
 public class UploadService {
 
-    /** 分片大小 8MB：满足 S3 规范"非末尾分片 ≥5MB"，前端无需感知 */
+    /**
+     * 分片大小 8MB：满足 S3 规范"非末尾分片 ≥5MB"，前端无需感知
+     */
     static final long PART_SIZE = 8L * 1024 * 1024;
 
-    /** S3 分片数上限 */
+    /**
+     * S3 分片数上限
+     */
     private static final int MAX_PART_COUNT = 10000;
 
-    /** md5 十六进制小写 32 位；同时保证 key 路径安全（不含目录分隔等字符） */
+    /**
+     * md5 十六进制小写 32 位；同时保证 key 路径安全（不含目录分隔等字符）
+     */
     private static final Pattern MD5 = Pattern.compile("^[0-9a-f]{32}$");
 
-    /** 媒体白名单：Content-Type -> 扩展名 */
+    /**
+     * 媒体白名单：Content-Type -> 扩展名
+     */
     private static final Map<String, String> EXT_BY_CONTENT_TYPE = Map.ofEntries(
             Map.entry("image/jpeg", ".jpg"),
             Map.entry("image/png", ".png"),
@@ -42,14 +50,15 @@ public class UploadService {
             Map.entry("audio/mp4", ".m4a"),
             Map.entry("audio/wav", ".wav"),
             Map.entry("video/mp4", ".mp4"),
-            Map.entry("video/webm", ".webm"));
+            Map.entry("video/webm", ".webm"),
+            Map.entry("video/matroska", ".mkv"));
 
-    private static final long IMAGE_MAX_BYTES = 5L * 1024 * 1024;
-    private static final long AUDIO_MAX_BYTES = 20L * 1024 * 1024;
-    private static final long VIDEO_MAX_BYTES = 100L * 1024 * 1024;
+    private static final long IMAGE_MAX_BYTES = 100L * 1024 * 1024 * 1024;
+    private static final long AUDIO_MAX_BYTES = 100L * 1024 * 1024 * 1024;
+    private static final long VIDEO_MAX_BYTES = 100L * 1024 * 1024 * 1024;
 
     static final String WHITELIST_HINT =
-            "仅支持 jpg / png / webp / gif 图片、mp3 / m4a / wav 音频、mp4 / webm 视频";
+            "仅支持 jpg / png / webp / gif 图片、mp3 / m4a / wav 音频、mp4 / webm / mkv 视频";
 
     private final StorageService storage;
 
@@ -59,7 +68,9 @@ public class UploadService {
 
     // ---------- 秒传查询 ----------
 
-    /** 秒传查询：只查不签发。公开桶已有同内容对象则返回其直链，前端直接使用。 */
+    /**
+     * 秒传查询：只查不签发。公开桶已有同内容对象则返回其直链，前端直接使用。
+     */
     public UploadDtos.CheckResponse check(String contentTypeRaw, String md5) {
         String contentType = normalizeContentType(contentTypeRaw);
         String key = requireMd5(md5) + requireWhitelisted(contentType);
@@ -108,7 +119,9 @@ public class UploadService {
                 ttl.toSeconds());
     }
 
-    /** 收尾：核对分片（连续、非末片=8MB、总量≤上限）后合并为正式对象 */
+    /**
+     * 收尾：核对分片（连续、非末片=8MB、总量≤上限）后合并为正式对象
+     */
     public UploadDtos.MultipartCompleteResponse complete(String key, String uploadId) {
         requireValidKey(key);
         String contentType = contentTypeOfKey(key);
@@ -150,7 +163,9 @@ public class UploadService {
         return urls;
     }
 
-    /** 分片对账；uploadId 已失效（不存在/已被覆盖完成）返回业务异常，前端重新走 init */
+    /**
+     * 分片对账；uploadId 已失效（不存在/已被覆盖完成）返回业务异常，前端重新走 init
+     */
     private List<StorageService.PartDigest> listAliveParts(String key, String uploadId) {
         if (key == null || key.isBlank() || uploadId == null || uploadId.isBlank()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "缺少 key 或 uploadId");
@@ -162,7 +177,9 @@ public class UploadService {
         return parts;
     }
 
-    /** key 必须形如 {32位md5}.{白名单扩展名}——内容寻址的固定形状，杜绝路径注入 */
+    /**
+     * key 必须形如 {32位md5}.{白名单扩展名}——内容寻址的固定形状，杜绝路径注入
+     */
     private void requireValidKey(String key) {
         if (key == null || key.isBlank()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "缺少对象 key");
@@ -177,7 +194,9 @@ public class UploadService {
         }
     }
 
-    /** 由 key 的扩展名反查 Content-Type；不在白名单返回 null */
+    /**
+     * 由 key 的扩展名反查 Content-Type；不在白名单返回 null
+     */
     private String contentTypeOfKey(String key) {
         int dot = key.lastIndexOf('.');
         if (dot < 0) {
@@ -199,7 +218,9 @@ public class UploadService {
         return ext;
     }
 
-    /** md5 归一化并强校验（32 位十六进制小写）；它是 key 的一部分，必须杜绝路径注入 */
+    /**
+     * md5 归一化并强校验（32 位十六进制小写）；它是 key 的一部分，必须杜绝路径注入
+     */
     private static String requireMd5(String md5) {
         String hash = md5 == null ? "" : md5.trim().toLowerCase();
         if (!MD5.matcher(hash).matches()) {
@@ -208,7 +229,9 @@ public class UploadService {
         return hash;
     }
 
-    /** 该 Content-Type 的单文件大小上限 */
+    /**
+     * 该 Content-Type 的单文件大小上限
+     */
     private static long maxBytesFor(String contentType) {
         if (contentType.startsWith("image/")) {
             return IMAGE_MAX_BYTES;
@@ -219,7 +242,9 @@ public class UploadService {
         return VIDEO_MAX_BYTES;
     }
 
-    /** MIME 归一化：去参数、转小写，如 "image/png; charset=x" -> "image/png" */
+    /**
+     * MIME 归一化：去参数、转小写，如 "image/png; charset=x" -> "image/png"
+     */
     static String normalizeContentType(String contentType) {
         return contentType == null || contentType.isBlank() ? ""
                 : contentType.split(";")[0].trim().toLowerCase();
