@@ -12,44 +12,40 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.model.BucketAlreadyExistsException;
 import software.amazon.awssdk.services.s3.model.BucketAlreadyOwnedByYouException;
-import software.amazon.awssdk.services.s3.model.BucketLifecycleConfiguration;
-import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
+import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
+import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
+import software.amazon.awssdk.services.s3.model.CompletedPart;
 import software.amazon.awssdk.services.s3.model.CreateBucketRequest;
+import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.ExpirationStatus;
-import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.LifecycleExpiration;
-import software.amazon.awssdk.services.s3.model.LifecycleRule;
-import software.amazon.awssdk.services.s3.model.LifecycleRuleFilter;
-import software.amazon.awssdk.services.s3.model.MetadataDirective;
+import software.amazon.awssdk.services.s3.model.ListPartsRequest;
 import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.PutBucketLifecycleConfigurationRequest;
+import software.amazon.awssdk.services.s3.model.NoSuchUploadException;
+import software.amazon.awssdk.services.s3.model.UploadPartRequest;
 import software.amazon.awssdk.services.s3.model.PutBucketPolicyRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.UploadPartPresignRequest;
 
 import java.io.InputStream;
 import java.net.URI;
 import java.time.Duration;
-import java.util.ArrayList;
+import java.util.List;
 
 /**
  * RustFS 存储（S3 兼容，AWS SDK v2 接入，见 docs.rustfs.com/zh/developer/sdk/java）：
  * path-style + us-east-1 是 RustFS 的固定要求。S3 客户端按 {@link StorageSettings} 的
  * 当前目标元组惰性构建——后台修改存储配置（endpoint/密钥/桶/过期天数/公开读）后，
- * 下次使用自动重建并幂等预配桶（建桶、tmp/ 生命周期、公开读策略），无需重启。
- * 读取走 UploadsController 的 302（预签名或公开读固定直链），直传收口走 stat/copy，本类只管写删与签发。
+ * 下次使用自动重建并幂等预配桶（建桶、匿名只读策略），无需重启。
+ * 公开桶：前端与数据库使用直链（directUrlOf 按当前配置拼出），读取不经应用。
  */
 @Slf4j
 @Service
 public class RustFsStorageService implements StorageService {
-
-    /** 生命周期规则 id，幂等安装时用于判重 */
-    private static final String TMP_LIFECYCLE_RULE_ID = "expire-tmp";
 
     private final StorageSettings settings;
 
@@ -111,13 +107,10 @@ public class RustFsStorageService implements StorageService {
         return built;
     }
 
-    /** 桶预配：建桶、tmp/ 生命周期、公开读策略，全部幂等且失败仅告警（不影响上传主流程） */
+    /** 桶预配：建桶、匿名只读策略（公开桶直读的前提），全部幂等且失败仅告警 */
     private void provision(S3Client s3, StorageSettings.S3Target target) {
         ensureBucket(s3, target.bucket());
-        ensureTmpLifecycle(s3, target);
-        if (target.publicRead()) {
-            ensurePublicReadPolicy(s3, target.bucket());
-        }
+        ensurePublicReadPolicy(s3, target.bucket());
     }
 
     @Override
@@ -139,7 +132,7 @@ public class RustFsStorageService implements StorageService {
             log.error("RustFS 上传失败: {}", relativePath, e);
             throw new BizException(ErrorCode.INTERNAL_ERROR, "文件保存失败");
         }
-        return StorageService.urlOf(relativePath);
+        return directUrlOf(relativePath);
     }
 
     @Override
@@ -174,14 +167,9 @@ public class RustFsStorageService implements StorageService {
     }
 
     @Override
-    public URI presignGetUrl(String key, Duration ttl) {
-        Bundle b = bundle();
-        var presigned = b.presigner().presignGetObject(GetObjectPresignRequest.builder()
-                .signatureDuration(ttl)
-                .getObjectRequest(GetObjectRequest.builder()
-                        .bucket(b.target().bucket()).key(key).build())
-                .build());
-        return URI.create(presigned.url().toString());
+    public String directUrlOf(String key) {
+        StorageSettings.S3Target target = settings.s3Target();
+        return target.endpoint().replaceAll("/+$", "") + "/" + target.bucket() + "/" + key;
     }
 
     @Override
@@ -197,21 +185,65 @@ public class RustFsStorageService implements StorageService {
     }
 
     @Override
-    public void copy(String fromKey, String toKey, String contentType) {
+    public String createMultipart(String key, String contentType) {
         Bundle b = bundle();
         try {
-            // 直传的 tmp/ 对象由前端 PUT，元数据不可信：REPLACE 覆写为白名单类型 + 目标前缀的缓存策略
-            b.s3().copyObject(CopyObjectRequest.builder()
-                    .sourceBucket(b.target().bucket()).sourceKey(fromKey)
-                    .destinationBucket(b.target().bucket()).destinationKey(toKey)
-                    .metadataDirective(MetadataDirective.REPLACE)
-                    .contentType(contentType)
-                    .cacheControl(StorageService.cacheControlFor(toKey))
+            return b.s3().createMultipartUpload(CreateMultipartUploadRequest.builder()
+                            .bucket(b.target().bucket()).key(key)
+                            .contentType(contentType == null || contentType.isBlank()
+                                    ? "application/octet-stream" : contentType)
+                            .build())
+                    .uploadId();
+        } catch (RuntimeException e) {
+            log.error("RustFS 初始化分片上传失败: {}", key, e);
+            throw new BizException(ErrorCode.INTERNAL_ERROR, "文件保存失败");
+        }
+    }
+
+    @Override
+    public List<PartDigest> listParts(String key, String uploadId) {
+        Bundle b = bundle();
+        try {
+            return b.s3().listParts(ListPartsRequest.builder()
+                            .bucket(b.target().bucket()).key(key).uploadId(uploadId).build())
+                    .parts().stream()
+                    .map(p -> new PartDigest(p.partNumber(), p.size(), p.eTag()))
+                    .toList();
+        } catch (NoSuchUploadException e) {
+            // uploadId 已失效（abort 过或不存在）：对账方据此判定会话死亡
+            return null;
+        }
+    }
+
+    @Override
+    public void completeMultipart(String key, String uploadId, List<PartDigest> parts) {
+        Bundle b = bundle();
+        try {
+            b.s3().completeMultipartUpload(CompleteMultipartUploadRequest.builder()
+                    .bucket(b.target().bucket()).key(key).uploadId(uploadId)
+                    .multipartUpload(CompletedMultipartUpload.builder()
+                            .parts(parts.stream()
+                                    .map(p -> CompletedPart.builder()
+                                            .partNumber(p.partNumber()).eTag(p.etag()).build())
+                                    .toList())
+                            .build())
                     .build());
         } catch (RuntimeException e) {
-            log.error("RustFS 复制对象失败: {} -> {}", fromKey, toKey, e);
+            log.error("RustFS 分片收尾失败: {}", key, e);
             throw new BizException(ErrorCode.INTERNAL_ERROR, "文件处理失败");
         }
+    }
+
+    @Override
+    public String presignUploadPartUrl(String key, String uploadId, int partNumber, Duration ttl) {
+        Bundle b = bundle();
+        var presigned = b.presigner().presignUploadPart(UploadPartPresignRequest.builder()
+                .signatureDuration(ttl)
+                .uploadPartRequest(UploadPartRequest.builder()
+                        .bucket(b.target().bucket()).key(key).uploadId(uploadId).partNumber(partNumber)
+                        .build())
+                .build());
+        return presigned.url().toString();
     }
 
     /** 桶不存在则创建；已存在或无建桶权限仅提示，真正上传时再暴露问题 */
@@ -224,42 +256,6 @@ public class RustFsStorageService implements StorageService {
         } catch (RuntimeException e) {
             log.warn("RustFS bucket 自动创建失败（若已在控制台创建或对象存储暂不可达可忽略）: {}",
                     e.toString());
-        }
-    }
-
-    /** 幂等安装 tmp/ 直传暂存的生命周期过期规则，未发布的直传文件到点自动回收 */
-    private void ensureTmpLifecycle(S3Client s3, StorageSettings.S3Target target) {
-        try {
-            var rules = new ArrayList<LifecycleRule>();
-            try {
-                rules.addAll(s3.getBucketLifecycleConfiguration(b -> b.bucket(target.bucket())).rules());
-            } catch (S3Exception e) {
-                // 2.25.x 无专用异常类：桶上还没有生命周期规则时 RustFS 回 404/NoSuchLifecycleConfiguration
-                if (e.statusCode() != 404
-                        && (e.awsErrorDetails() == null
-                        || !"NoSuchLifecycleConfiguration".equals(e.awsErrorDetails().errorCode()))) {
-                    throw e;
-                }
-            }
-            if (rules.stream().anyMatch(r -> TMP_LIFECYCLE_RULE_ID.equals(r.id()))) {
-                return;
-            }
-            rules.add(LifecycleRule.builder()
-                    .id(TMP_LIFECYCLE_RULE_ID)
-                    .filter(LifecycleRuleFilter.builder().prefix(TMP_PREFIX).build())
-                    .status(ExpirationStatus.ENABLED)
-                    .expiration(LifecycleExpiration.builder()
-                            .days(target.tmpExpireDays()).build())
-                    .build());
-            s3.putBucketLifecycleConfiguration(PutBucketLifecycleConfigurationRequest.builder()
-                    .bucket(target.bucket())
-                    .lifecycleConfiguration(BucketLifecycleConfiguration.builder().rules(rules).build())
-                    .build());
-            log.info("RustFS {} 直传过期规则已就绪: {} 天", TMP_PREFIX, target.tmpExpireDays());
-        } catch (RuntimeException e) {
-            // 不影响上传主流程，只是 tmp/ 不会被自动清理
-            log.warn("RustFS 生命周期规则配置失败（不影响上传，仅影响 {} 自动清理）: {}",
-                    TMP_PREFIX, e.toString());
         }
     }
 
@@ -280,13 +276,13 @@ public class RustFsStorageService implements StorageService {
             }
             s3.putBucketPolicy(PutBucketPolicyRequest.builder()
                     .bucket(bucket).policy(desired).build());
-            log.info("RustFS 公开读桶策略已安装（匿名只读 moment/ 与 avatar/，tmp/ 与列举仍私有）");
+            log.info("RustFS 公开读桶策略已安装（匿名只读 moment/ 与 avatar/，列举仍私有）");
         } catch (S3Exception e) {
             if (e.statusCode() == 404
                     || (e.awsErrorDetails() != null && "NoSuchBucketPolicy".equals(e.awsErrorDetails().errorCode()))) {
                 s3.putBucketPolicy(PutBucketPolicyRequest.builder()
                         .bucket(bucket).policy(desired).build());
-                log.info("RustFS 公开读桶策略已安装（匿名只读 moment/ 与 avatar/，tmp/ 与列举仍私有）");
+                log.info("RustFS 公开读桶策略已安装（匿名只读 moment/ 与 avatar/，列举仍私有）");
                 return;
             }
             log.warn("RustFS 公开读桶策略安装失败（下载将退回预签名模式）: {}", e.toString());

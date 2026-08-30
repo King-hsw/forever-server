@@ -4,7 +4,7 @@
  * 生效配置由 {@link com.forever.server.storage.StorageSettings} 解析——
  * 统一在后台「站点设置」（sys_site_config 的 storage.*）在线配置，修改即时生效无需重启；
  * 未配置项回落内置默认值（见 StorageProperties）。
- * 数据库一律存 /uploads/{相对路径} 形式的稳定地址，由
- * {@link com.forever.server.storage.UploadsController} 302 到预签名 URL 或公开读固定直链。
+ * 数据库存 RustFS 公开桶直链（{endpoint}/{bucket}/{key}），由
+ * 对象均在公开桶，前端使用 RustFS 直链（{endpoint}/{bucket}/{key}）直接读取。
  */
 package com.forever.server.storage;

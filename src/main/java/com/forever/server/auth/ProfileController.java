@@ -13,9 +13,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Map;
 
@@ -59,21 +57,6 @@ public class ProfileController {
         AuthPrincipal principal = (AuthPrincipal) authentication.getPrincipal();
         long uid = principal.uid();
         return ApiResponse.ok(profileService.update(uid, request.nickname(), request.email(), request.site()));
-    }
-
-    @Operation(summary = "上传头像", description = "jpg / png / webp，≤2MB；multipart 字段名 file")
-    @PostMapping("/avatar")
-    public ApiResponse<ProfileResponse> uploadAvatar(Authentication authentication,
-                                                     @RequestParam("file") MultipartFile file) {
-        AuthPrincipal principal = (AuthPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(profileService.uploadAvatar(principal.uid(), file));
-    }
-
-    @Operation(summary = "删除自定义头像", description = "删除后头像回落为邮箱 Gravatar")
-    @DeleteMapping("/avatar")
-    public ApiResponse<ProfileResponse> removeAvatar(Authentication authentication) {
-        AuthPrincipal principal = (AuthPrincipal) authentication.getPrincipal();
-        return ApiResponse.ok(profileService.removeAvatar(principal.uid()));
     }
 
     @Operation(summary = "修改密码", description = "需校验原密码")

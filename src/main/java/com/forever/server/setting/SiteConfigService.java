@@ -60,12 +60,8 @@ public class SiteConfigService {
     public static final String STORAGE_SECRET_KEY = "storage.secret-key";
     /** 存储桶名（必填），缺失时首次使用自动创建 */
     public static final String STORAGE_BUCKET = "storage.bucket";
-    /** 预签名 URL 有效期（下载 302 与直传 PUT 共用），如 15m / PT15M，默认 15m */
+    /** 预签名 URL 有效期（直传 PUT 与分片共用），如 15m / PT15M，默认 15m */
     public static final String STORAGE_PRESIGN_TTL = "storage.presign-ttl";
-    /** 直传暂存前缀 tmp/ 的生命周期过期天数（未发布自动回收），默认 1 */
-    public static final String STORAGE_TMP_EXPIRE_DAYS = "storage.tmp-expire-days";
-    /** 公开读：匿名只读 moment/ 与 avatar/，下载跳固定直链（默认关闭） */
-    public static final String STORAGE_PUBLIC_READ = "storage.public-read";
 
     /** 已知配置项元数据：key -> 中文说明（新增可调参数在这里登记） */
     private static final Map<String, String> KNOWN_KEYS = Map.ofEntries(
@@ -88,10 +84,7 @@ public class SiteConfigService {
             Map.entry(STORAGE_ACCESS_KEY, "对象存储 Access Key（必填）"),
             Map.entry(STORAGE_SECRET_KEY, "对象存储 Secret Key（必填）"),
             Map.entry(STORAGE_BUCKET, "存储桶名（必填），缺失时首次使用自动创建"),
-            Map.entry(STORAGE_PRESIGN_TTL, "预签名 URL 有效期（下载 302 与直传 PUT 共用），如 15m 或 PT15M，默认 15m"),
-            Map.entry(STORAGE_TMP_EXPIRE_DAYS, "直传暂存 tmp/ 的过期天数（未发布自动回收），默认 1"),
-            Map.entry(STORAGE_PUBLIC_READ, "公开读：匿名只读 moment/ 与 avatar/，下载跳固定直链便于浏览器/CDN 缓存；"
-                    + "修改后首次使用时幂等安装桶策略，关闭后已装策略需在对象存储控制台手动删除（true/false）")
+            Map.entry(STORAGE_PRESIGN_TTL, "预签名 URL 有效期（直传 PUT 与分片共用），如 15m 或 PT15M，默认 15m")
     );
 
     private final SiteConfigMapper mapper;
@@ -204,7 +197,7 @@ public class SiteConfigService {
                 throw new BizException(ErrorCode.BAD_REQUEST, "配置值必须为整数");
             }
         } else if (key.equals(COMMENT_AUTO_APPROVE) || key.equals(COMMENT_NOTIFY_MAIL)
-                || key.equals(AI_SUMMARY_ENABLED) || key.equals(STORAGE_PUBLIC_READ)) {
+                || key.equals(AI_SUMMARY_ENABLED)) {
             if (!"true".equalsIgnoreCase(trimmed) && !"false".equalsIgnoreCase(trimmed)) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "布尔型配置只接受 true/false");
             }
@@ -225,14 +218,6 @@ public class SiteConfigService {
                 DurationStyle.detectAndParse(trimmed);
             } catch (IllegalArgumentException e) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "有效期格式不正确，如 15m / 30s / PT15M");
-            }
-        } else if (key.equals(STORAGE_TMP_EXPIRE_DAYS)) {
-            try {
-                if (Integer.parseInt(trimmed) < 1) {
-                    throw new BizException(ErrorCode.BAD_REQUEST, "过期天数必须 >= 1");
-                }
-            } catch (NumberFormatException e) {
-                throw new BizException(ErrorCode.BAD_REQUEST, "过期天数必须为整数");
             }
         }
 

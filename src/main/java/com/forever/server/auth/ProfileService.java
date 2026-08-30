@@ -3,7 +3,6 @@ package com.forever.server.auth;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.Strings;
-import com.forever.server.storage.StorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -13,8 +12,8 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * 当前登录用户的个人资料：昵称 / 邮箱 / 主页、头像（本地上传 + Gravatar 兜底）、修改密码。
- * 头像经 {@link StorageService} 落到配置的存储后端，地址恒为 /uploads/avatar/**。
+ * 当前登录用户的个人资料：昵称 / 邮箱 / 主页、头像（Gravatar 兜底）、修改密码。
+ * 自定义头像上传已下线：avatar_url 仅保留历史数据的直链渲染。
  */
 @Slf4j
 @Service
@@ -31,14 +30,10 @@ public class ProfileService {
 
     private final SysUserMapper sysUserMapper;
     private final PasswordEncoder passwordEncoder;
-    private final StorageService storage;
 
-    public ProfileService(SysUserMapper sysUserMapper,
-                          PasswordEncoder passwordEncoder,
-                          StorageService storage) {
+    public ProfileService(SysUserMapper sysUserMapper, PasswordEncoder passwordEncoder) {
         this.sysUserMapper = sysUserMapper;
         this.passwordEncoder = passwordEncoder;
-        this.storage = storage;
     }
 
     public ProfileResponse profileOf(long uid) {
@@ -64,43 +59,6 @@ public class ProfileService {
         return profileOf(uid);
     }
 
-    /** 保存头像到存储后端（avatar/avatar-{uid}.{ext}），返回携带新头像 URL 的资料 */
-    public ProfileResponse uploadAvatar(long uid, MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "未选择文件");
-        }
-        String ext = EXT_BY_CONTENT_TYPE.get(file.getContentType());
-        if (ext == null) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "仅支持 jpg / png / webp 图片");
-        }
-        if (file.getSize() > MAX_AVATAR_BYTES) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "头像不能超过 2MB");
-        }
-        SysUser user = requireUser(uid);
-        // 换扩展名时删掉旧文件，避免存储里堆积死图
-        deleteUrlFile(user.getAvatarUrl());
-        String url;
-        try {
-            url = storage.save("avatar/avatar-" + uid + ext,
-                    file.getContentType(), file.getInputStream(), file.getSize());
-        } catch (IOException e) {
-            log.error("保存头像失败: uid={}", uid, e);
-            throw new BizException(ErrorCode.INTERNAL_ERROR, "头像保存失败");
-        }
-        sysUserMapper.updateAvatarUrl(uid, url);
-        log.info("avatar uploaded: uid={}, size={}B", uid, file.getSize());
-        return profileOf(uid);
-    }
-
-    /** 删除自定义头像，回落为邮箱 Gravatar */
-    public ProfileResponse removeAvatar(long uid) {
-        SysUser user = requireUser(uid);
-        deleteUrlFile(user.getAvatarUrl());
-        sysUserMapper.updateAvatarUrl(uid, null);
-        log.info("avatar removed: uid={}", uid);
-        return profileOf(uid);
-    }
-
     public void changePassword(long uid, String oldPassword, String newPassword) {
         SysUser user = requireUser(uid);
         if (!passwordEncoder.matches(oldPassword, user.getPassword())) {
@@ -119,15 +77,7 @@ public class ProfileService {
         return user;
     }
 
-    private void deleteUrlFile(String avatarUrl) {
-        String relative = StorageService.relativeOf(avatarUrl);
-        if (relative == null || !relative.startsWith("avatar/")) {
-            return;
-        }
-        storage.delete(relative);
-    }
-
-    /** 头像展示地址：自定义上传优先，其次按邮箱 hash 取 Gravatar，均无则 null */
+    /** 头像展示地址：历史自定义直链优先，否则按邮箱 hash 取 Gravatar */
     static ProfileResponse toResponse(SysUser user) {
         String avatar = user.getAvatarUrl();
         if (avatar == null && user.getEmail() != null) {

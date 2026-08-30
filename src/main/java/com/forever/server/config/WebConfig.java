@@ -7,7 +7,7 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * /uploads/** 的访问由 UploadsController 统一 302 到对象存储，静态资源映射不再涉及。
+ * 文件读取为 RustFS 公开桶直链，不经应用；本类仅保留拦截器注册。
  */
 @Configuration
 public class WebConfig implements WebMvcConfigurer {

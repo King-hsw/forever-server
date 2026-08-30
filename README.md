@@ -3,7 +3,7 @@
 个人博客后台 REST API。Spring Boot 4 + MyBatis + PostgreSQL + Flyway，按功能分包，一个包一个业务模块。
 
 - **技术栈**：JDK 25 / Spring Boot 4 / MyBatis / PostgreSQL 16+ / Flyway / Spring Security（双 Token）/ AWS SDK v2（S3 兼容对象存储）/ springdoc（Swagger UI）
-- **接口分层**：`/api/v1/**` 前台公开接口（无需登录）、`/api/admin/**` 后台接口（需登录 + RBAC 权限码）、`/uploads/**` 文件访问（302 到对象存储）、`/rss` 本站 RSS 输出
+- **接口分层**：`/api/v1/**` 前台公开接口（无需登录）、`/api/admin/**` 后台接口（需登录 + RBAC 权限码）、`/rss` 本站 RSS 输出；文件读取直连 RustFS 公开桶直链，不经应用
 - **文档**：启动后访问 <http://localhost:8080/swagger-ui.html>（生产环境默认关闭）
 
 ## 模块总览
@@ -17,7 +17,7 @@
 | `comment` | 评论（文章/留言板/动态三种目标复用一套表） | comment |
 | `sensitive` | 评论敏感词库（内存缓存） | sensitive_word |
 | `moment` | 动态（朋友圈）：时间线、发布、点赞、媒体 | moment / moment_like |
-| `storage` | 文件存储：RustFS（S3 兼容）读写、直传收口、/uploads 302 | — |
+| `storage` | 文件存储：RustFS（S3 兼容）读写、直传/分片/续传、媒体资产建档、公开桶直链读取 | — |
 | `rss` | 友博订阅聚合 + 本站 RSS 输出 | rss_feed / rss_item |
 | `friendlink` | 友链申请与审核 | friend_link |
 | `search` | 全局搜索（标题/摘要/正文 + 高亮） | search_index |
@@ -41,7 +41,7 @@
 | `POST /api/auth/logout` | 登出，吊销整个会话 |
 | `GET /api/admin/me` | 当前身份、角色与权限码（仅需登录） |
 | `GET/PUT /api/admin/profile` | 个人资料（昵称/邮箱/主页） |
-| `POST/DELETE /api/admin/profile/avatar` | 头像上传（≤2MB，jpg/png/webp，Gravatar 兜底）/ 删除 |
+
 | `PUT /api/admin/profile/password` | 修改密码（需原密码） |
 
 **RBAC**：用户 → 角色 → 权限码三级，内置 ADMIN / USER 角色。接口用 `@Perm("article:publish")` 显式声明所需权限码——**未声明一律拒绝（fail-closed）**，裸 `@Perm` 表示仅需登录态。启动时 `PermissionAutoRegistrar` 扫描全部 `@Perm` 注解，幂等补 `sys_permission` 行并授予 ADMIN 角色，新接口无需手工插权限数据。权限集按 uid 内存缓存，角色/用户变更后即时失效。
@@ -112,26 +112,37 @@
 | `POST /api/admin/moments` | 发布（`moment:post`），内容/图/音/视频至少一项，图片 ≤9 张 |
 | `DELETE /api/admin/moments/{id}` | 删除（作者本人或 ADMIN；级联删点赞与评论） |
 | `POST/DELETE /api/admin/moments/{id}/like` | 点赞 / 取消（仅需登录，幂等） |
-| `POST /api/admin/upload` | 媒体服务端中转上传（≤120MB 单文件） |
-| `POST /api/admin/upload/presign` | 直传预签名（大文件绕过服务端，见 storage 模块） |
+
+统一上传接口（upload 模块，场景化复用，详见「文件存储」）：
+
+| 接口 | 说明 |
+|---|---|
+| `POST /api/admin/upload/check` | 秒传查询：公开桶已有同 md5 内容 → 直接返回直链，跳过上传 |
+| `POST /api/admin/upload/presign` | 单文件直传凭证（check 未命中后调用）：限时 PUT 地址 + 直链 |
+| `POST /api/admin/upload/multipart/init` | 分片初始化：8MB/片，返回 uploadId 与全部分片直传地址 |
+| `POST /api/admin/upload/multipart/complete` | 分片收尾：核对分片连续性/大小后合并 |
+
+> 以上接口统一需要 `upload:upload` 权限码（启动时自动注册，RBAC 分配）——上传是独立模块能力，不随登录自动放行。
 
 要点：媒体白名单（图片 jpg/png/webp/gif ≤5MB、音频 mp3/m4a/wav ≤20MB、视频 mp4/webm ≤100MB），Content-Type 校验与扩展名映射共用一张表；媒体 JSON（images/audio/video）随动态存取；地点文本经高德逆地理（`moments.amapKey`）；时间线批量组装作者/点赞数/评论数避免 N+1。
 
 ## 文件存储（storage）
 
-上传文件（头像、动态媒体）统一写入 S3 兼容对象存储 **RustFS**（官方推荐 AWS SDK v2 接入，path-style + us-east-1，桶缺失自动创建）。数据库恒存 `/uploads/...` 稳定地址，访问时 302 到实际对象：
+上传文件（头像、动态媒体）统一写入 S3 兼容对象存储 **RustFS**（官方推荐 AWS SDK v2 接入，path-style + us-east-1，桶缺失自动创建）。桶为**公开桶**（启动时自动安装匿名只读策略，仅 `moment/` 与 `avatar/` 前缀，列举保持私有），数据库与前端一律存/用 **RustFS 直链**（`{endpoint}/{bucket}/{key}`），读取不经应用：
 
-- **私有模式**：302 跳预签名下载 URL（`storage.presign-ttl`，默认 15 分钟）
-- **公开读模式**（`storage.public-read`，小带宽服务器建议开启）：自动安装匿名只读桶策略（仅 `moment/` 与 `avatar/` 前缀，`tmp/` 与列举保持私有），302 跳固定直链，对象带缓存策略——moment 媒体 `immutable` 强缓存一年、avatar 每次再校验，每个访客每个文件只拉一次；URL 恒定，日后接 CDN 零改造
+- 对象带缓存策略——moment 媒体 `immutable` 强缓存一年、avatar 每次再校验，每个访客每个文件只拉一次
+- `storage.endpoint` 必须是**浏览器可达的地址**（公网域名或反代后的地址）；换地址 = 站点设置改一项 + 历史直链失效需一次性迁移，这是直链模式的已知代价
+- 将来需要权限控制的文件走**独立隐私桶**（匿名不可读，读取由业务接口现签预签名 URL）
 
-**存储配置统一在后台「站点设置」在线完成**（`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl` / `tmp-expire-days` / `public-read`），保存即时生效、重启不丢，换对象存储无需重新部署。S3 客户端按配置元组惰性构建，配置变更后自动重建并幂等预配桶（建桶、`tmp/` 生命周期、公开读策略）。连接信息不完整时应用正常启动，仅上传/下载报「配置不完整」。
+**存储配置统一在后台「站点设置」在线完成**（`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl`），保存即时生效、重启不丢。S3 客户端按配置元组惰性构建，配置变更后自动重建并幂等预配桶（建桶、匿名只读策略）。连接信息不完整时应用正常启动，仅上传报「配置不完整」。
 
-**动态媒体直传**（可选，大文件如 100MB 视频绕过服务端中转）：
+**内容寻址（无状态，无文件表）**：对象 key = `{场景前缀}/{md5}.{ext}`（前端算好 md5 随申请带上）——**key 本身就是内容的指纹**，秒传查询就是对这个地址发一次 HEAD：命中即说明同内容已上传，直接返回直链。查询（check）与凭证签发（presign/init）是两个独立接口，由前端编排。文件状态（对象、分片会话）全部由 RustFS 自持，业务库不记录任何文件信息，发布时仅校验引用为合法直链。代价：无归属校验（持有直链即持有文件）、无台账，中断的分片会话与未引用对象由运营侧扫桶处置。
 
-1. `POST /api/admin/upload/presign`（body: `{"contentType":"image/png"}`）→ 限时 PUT 地址 `url` + 对象 `key`（`tmp/{yyyy/MM}/{uuid}.{ext}`）
-2. 前端 `PUT` 文件体到 `url`，请求头 `Content-Type` 与预签时一致（参与签名，必须原样）
-3. 发布动态时把 `key` 填入 `images` / `audio` / `video` 字段，服务端 HeadObject 复核类型与大小后 CopyObject 收口为 `/uploads/moment/...` 正式对象并删除暂存（key 格式正则校验，防伪造收口任意对象）
-4. 未发布的暂存对象由桶生命周期规则（`tmp/` 前缀，`storage.tmp-expire-days` 默认 1 天）自动回收，配置生效后首次使用时幂等安装
+**直传与分片续传**（大文件/弱网场景）：
+
+1. 前端本地算文件 md5 → `POST /api/admin/upload/check` → `exists=true` 即秒传（直接拿直链，跳过上传）
+2. 未命中 → `POST /api/admin/upload/presign`（单文件）或 `multipart/init`（分片）拿凭证 → PUT 文件体（Content-Type 头与凭证一致，参与签名）→ 把 `accessUrl` 填入业务字段
+3. 分片：`multipart/init`（8MB/片）→ 逐片 PUT 到 `partUrls` → `multipart/complete` 收尾（中断即作废重传）
 
 本地起一个 RustFS 试用（S3 API 9000 / 控制台 9001，默认账密 `rustfsadmin`/`rustfsadmin`）：
 
@@ -173,7 +184,7 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 - **站点**：`site.url`（文章前台链接与 RSS 用）、`site.name`、`site.birth-date`（页脚运行时长）、`board.title` / `board.summary`
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 - **动态**：`moments.amapKey`（高德逆地理）
-- **存储**：`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl` / `tmp-expire-days` / `public-read`（见 storage 模块）
+- **存储**：`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl` / `public-read`（见 storage 模块）
 
 > 密钥类配置（access-key / secret-key / api-key）的更新日志自动脱敏为 `***`，不会明文写入日志文件。
 

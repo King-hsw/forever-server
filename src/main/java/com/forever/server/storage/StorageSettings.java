@@ -18,9 +18,8 @@ import java.time.Duration;
 @Component
 public class StorageSettings {
 
-    /** 构建 S3 客户端与桶预配（建桶/生命周期/公开读策略）所依据的目标元组，任一项变化即触发重建 */
-    public record S3Target(String endpoint, String accessKey, String secretKey,
-                           String bucket, int tmpExpireDays, boolean publicRead) {
+    /** 构建 S3 客户端与桶预配（建桶/匿名只读策略）所依据的目标元组，任一项变化即触发重建 */
+    public record S3Target(String endpoint, String accessKey, String secretKey, String bucket) {
     }
 
     private final SiteConfigService siteConfig;
@@ -60,27 +59,6 @@ public class StorageSettings {
         }
     }
 
-    public int tmpExpireDays() {
-        String value = siteConfig.getString(SiteConfigService.STORAGE_TMP_EXPIRE_DAYS, null);
-        if (value == null) {
-            return props.tmpExpireDays();
-        }
-        try {
-            int days = Integer.parseInt(value.trim());
-            if (days >= 1) {
-                return days;
-            }
-        } catch (NumberFormatException ignored) {
-            // 落到下面的告警与回落
-        }
-        log.warn("site config storage.tmp-expire-days={} 非法，回落 {}", value, props.tmpExpireDays());
-        return props.tmpExpireDays();
-    }
-
-    public boolean publicRead() {
-        return siteConfig.getBoolean(SiteConfigService.STORAGE_PUBLIC_READ, props.isPublicRead());
-    }
-
     /**
      * 当前生效的存储目标；连接信息任一缺失即抛业务异常。
      * 存储配置允许启动时残缺（应用正常起，仅上传/下载报错，后台补齐即恢复），故不做启动期校验。
@@ -95,7 +73,7 @@ public class StorageSettings {
                     "对象存储配置不完整：需要 endpoint / access-key / secret-key / bucket"
                             + "（后台站点设置 → 存储）");
         }
-        return new S3Target(endpoint, accessKey, secretKey, bucket, tmpExpireDays(), publicRead());
+        return new S3Target(endpoint, accessKey, secretKey, bucket);
     }
 
     private static boolean isBlank(String s) {
