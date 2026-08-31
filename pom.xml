@@ -170,18 +170,16 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- AI 诊断测试专用：验证讯飞星火 OpenAI 兼容接口与 Spring AI(openai-java) 的兼容性。
-             仅 test 作用域，不进生产 classpath；主代码已改用 JDK HttpClient 直连。 -->
+        <!-- AI 概要：只用核心包手动构建，不走 starter 自动装配——
+             API Key 存 sys_site_config 由后台运行时配置，未配置即功能关闭，启动不依赖 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai</artifactId>
-            <scope>test</scope>
         </dependency>
     </dependencies>
 
     <dependencyManagement>
         <dependencies>
-            <!-- Spring AI BOM：为 test 作用域的 spring-ai-openai 固定版本 -->
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
