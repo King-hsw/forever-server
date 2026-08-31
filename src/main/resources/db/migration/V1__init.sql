@@ -173,11 +173,9 @@ CREATE TABLE sys_role_permission (
     PRIMARY KEY (role_id, permission_id)
 );
 
--- 内置角色
+-- 内置角色（仅超管，其余角色后台按需创建）
 INSERT INTO sys_role (code, name, remark, built_in) VALUES
-    ('ADMIN',  '管理员', '站长，拥有全部权限', true),
-    ('MEMBER', '成员',   '可发表朋友圈，可访问书城', true),
-    ('USER',   '普通用户', '可访问书城', true);
+    ('ADMIN', '管理员', '站长，拥有全部权限', true);
 
 -- 内置权限点（端点级权限码由 PermissionAutoRegistrar 启动时自动注册，不在此播种）
 INSERT INTO sys_permission (code, name, module) VALUES
@@ -186,12 +184,9 @@ INSERT INTO sys_permission (code, name, module) VALUES
     ('store:access',  '书城访问',   '书城'),
     ('store:manage',  '书城管理',   '书城');
 
--- 默认授权矩阵
+-- 默认授权：ADMIN 持有全部权限点
 INSERT INTO sys_role_permission (role_id, permission_id)
-SELECT r.id, p.id FROM sys_role r JOIN sys_permission p ON
-    (r.code = 'ADMIN' AND p.code IN ('admin:access', 'moment:post', 'store:access', 'store:manage'))
- OR (r.code = 'MEMBER' AND p.code IN ('moment:post', 'store:access'))
- OR (r.code = 'USER' AND p.code = 'store:access');
+SELECT r.id, p.id FROM sys_role r JOIN sys_permission p ON r.code = 'ADMIN';
 
 -- 登录态双 Token（不透明随机串，落库可吊销）：只存 SHA-256 哈希，删行即登出
 CREATE TABLE sys_auth_token (

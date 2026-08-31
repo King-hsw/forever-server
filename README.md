@@ -44,7 +44,7 @@
 
 | `PUT /api/admin/profile/password` | 修改密码（需原密码） |
 
-**RBAC**：用户 → 角色 → 权限码三级，内置 ADMIN / USER 角色。接口用 `@Perm("article:publish")` 显式声明所需权限码——**未声明一律拒绝（fail-closed）**，裸 `@Perm` 表示仅需登录态。启动时 `PermissionAutoRegistrar` 扫描全部 `@Perm` 注解，幂等补 `sys_permission` 行并授予 ADMIN 角色，新接口无需手工插权限数据。权限集按 uid 内存缓存，角色/用户变更后即时失效。
+**RBAC**：用户 → 角色 → 权限码三级，仅内置 ADMIN 角色，其余角色后台按需创建。接口用 `@Perm("article:publish")` 显式声明所需权限码——**未声明一律拒绝（fail-closed）**，裸 `@Perm` 表示仅需登录态。启动时 `PermissionAutoRegistrar` 扫描全部 `@Perm` 注解，幂等补 `sys_permission` 行并授予 ADMIN 角色，新接口无需手工插权限数据。权限集按 uid 内存缓存，角色/用户变更后即时失效。
 
 | 接口 | 权限码 |
 |---|---|

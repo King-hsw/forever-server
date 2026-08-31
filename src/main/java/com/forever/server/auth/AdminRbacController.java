@@ -78,7 +78,7 @@ public class AdminRbacController {
     }
 
     @Perm("rbac:user:create")
-    @Operation(summary = "创建用户", description = "后台开号，指定初始角色（如 MEMBER/USER）")
+    @Operation(summary = "创建用户", description = "后台开号，指定初始角色")
     @PostMapping("/users")
     public ApiResponse<UserView> createUser(@Valid @RequestBody UserCreateRequest request) {
         SysUser created = rbacService.createUser(request.username(), request.password(),
