@@ -170,23 +170,10 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- AI 概要：只用核心包手动构建，不走 starter 自动装配——
-             API Key 存 sys_site_config 由后台运行时配置，未配置即功能关闭，启动不依赖 -->
-        <dependency>
-            <groupId>org.springframework.ai</groupId>
-            <artifactId>spring-ai-openai</artifactId>
-        </dependency>
     </dependencies>
 
     <dependencyManagement>
         <dependencies>
-            <dependency>
-                <groupId>org.springframework.ai</groupId>
-                <artifactId>spring-ai-bom</artifactId>
-                <version>2.0.1</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
             <!-- web-push 传递的 0.7.9 太老（VAPID JWT 签名用），显式提到当前版 -->
             <dependency>
                 <groupId>org.bitbucket.b_c</groupId>
