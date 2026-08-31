@@ -26,7 +26,7 @@
 | `common` | 统一响应、异常、分页、slug、工具类 | — |
 | `config` | Security / Web MVC / 启动期配置绑定 | — |
 
-迁移脚本见 `src/main/resources/db/migration/`（V1–V21），启动时 Flyway 自动执行。
+迁移脚本为单文件基线 `src/main/resources/db/migration/V1__init.sql`（原 V1–V25 增量脚本的合并净结构），启动时 Flyway 自动执行。
 
 ---
 
@@ -174,7 +174,7 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 
 ## 全局搜索（search）
 
-`GET /api/v1/search?keyword=`：按标题/摘要/正文模糊搜索已发布文章（V14 搜索索引表），返回标题与摘要片段的 `<em>` 高亮（先在原文定位命中、再分段转义后插 `<em>`，前端可安全 v-html；片段来源：正文第一命中 > 摘要第一命中 > 开头兜底）。关键词超 100 字截断，空关键词返回空页。每次搜索记一条 info 日志（关键词 + 命中数），便于了解访客关注点。
+`GET /api/v1/search?keyword=`：按标题/摘要/正文模糊搜索已发布文章（pg_trgm GIN 索引），返回标题与摘要片段的 `<em>` 高亮（先在原文定位命中、再分段转义后插 `<em>`，前端可安全 v-html；片段来源：正文第一命中 > 摘要第一命中 > 开头兜底）。关键词超 100 字截断，空关键词返回空页。每次搜索记一条 info 日志（关键词 + 命中数），便于了解访客关注点。
 
 ## 站点设置（setting）
 
