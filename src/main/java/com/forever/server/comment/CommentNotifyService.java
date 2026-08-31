@@ -3,14 +3,10 @@ package com.forever.server.comment;
 import com.forever.server.auth.SysUser;
 import com.forever.server.auth.SysUserMapper;
 import com.forever.server.config.BlogProperties;
+import com.forever.server.mail.MailService;
 import com.forever.server.push.PushService;
 import com.forever.server.setting.SiteConfigService;
-import jakarta.mail.internet.InternetAddress;
-import jakarta.mail.internet.MimeMessage;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 /**
@@ -22,15 +18,15 @@ import org.springframework.stereotype.Service;
 @Service
 public class CommentNotifyService {
 
-    private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final MailService mailService;
     private final SiteConfigService siteConfig;
     private final PushService pushService;
     private final SysUserMapper sysUserMapper;
     private final BlogProperties blogProperties;
 
-    public CommentNotifyService(ObjectProvider<JavaMailSender> mailSenderProvider, SiteConfigService siteConfig,
+    public CommentNotifyService(MailService mailService, SiteConfigService siteConfig,
                                 PushService pushService, SysUserMapper sysUserMapper, BlogProperties blogProperties) {
-        this.mailSenderProvider = mailSenderProvider;
+        this.mailService = mailService;
         this.siteConfig = siteConfig;
         this.pushService = pushService;
         this.sysUserMapper = sysUserMapper;
@@ -107,23 +103,14 @@ public class CommentNotifyService {
                   %s""".formatted(articleTitle, parent.getContent(), reply.getNickname(), reply.getContent());
     }
 
-    private void send(String to, String subject, String text) throws Exception {
+    private void send(String to, String subject, String text) {
         if (to == null || to.isBlank()) {
             return; // 收件人未留邮箱（登录用户资料无邮箱），不发
         }
-        JavaMailSender sender = mailSenderProvider.getIfAvailable();
-        if (sender == null) {
-            log.debug("mail skipped: spring.mail not configured");
+        if (!mailService.configured()) {
+            log.debug("mail skipped: mail.* not configured");
             return;
         }
-        MimeMessage message = sender.createMimeMessage();
-        MimeMessageHelper helper = new MimeMessageHelper(message, false, "UTF-8");
-        helper.setTo(to);
-        helper.setSubject(subject);
-        helper.setText(text);
-        helper.setFrom(new InternetAddress(siteConfig.getString(SiteConfigService.COMMENT_FROM_EMAIL,
-                "noreply@example.com"), siteConfig.siteName()));
-        sender.send(message);
-        log.info("comment notify mail sent: to={}, subject={}", to, subject);
+        mailService.send(to, subject, text);
     }
 }

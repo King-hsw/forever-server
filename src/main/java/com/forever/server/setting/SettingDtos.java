@@ -1,7 +1,10 @@
 package com.forever.server.setting;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 /**
  * 站点设置 DTO。
@@ -23,8 +26,17 @@ public final class SettingDtos {
             @Schema(description = "配置键", example = "comment.post-interval-seconds")
             @NotBlank(message = "key 不能为空")
             String key,
-            @Schema(description = "配置值（数值型配置须为 >= 0 的整数）", example = "15")
-            @NotBlank(message = "value 不能为空")
+            @Schema(description = "配置值（数值型配置须为 >= 0 的整数）；留空表示清除配置、恢复默认值", example = "15")
+            @NotNull(message = "value 不能为 null")
             String value) {
+    }
+
+    @Schema(description = "测试邮件请求")
+    public record MailTestRequest(
+            @Schema(description = "收件人邮箱")
+            @NotBlank(message = "收件人不能为空")
+            @Email(message = "收件人邮箱格式不正确")
+            @Size(max = 200, message = "收件人过长")
+            String to) {
     }
 }

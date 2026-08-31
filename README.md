@@ -177,15 +177,16 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 
 ## 站点设置（setting）
 
-`GET /api/admin/settings`（`setting:list`）列出全部可调参数与中文说明，`PUT /api/admin/settings`（`setting:update`）按 key 更新：白名单 + 类型校验（布尔只收 true/false、邮箱/URL/日期格式、数值范围），落库 + 内存缓存双写，**即时生效、重启不丢**。参数分组：
+`GET /api/admin/settings`（`setting:list`）列出全部可调参数与中文说明，`PUT /api/admin/settings`（`setting:update`）按 key 更新（留空即清除、恢复默认值）：白名单 + 类型校验（布尔只收 true/false、邮箱/URL/日期格式、数值范围），落库 + 内存缓存双写，**即时生效、重启不丢**。`POST /api/admin/settings/mail/test`（`setting:update`）用当前 `mail.*` SMTP 配置向指定地址发测试邮件，验证账密与发件人可用。参数分组：
 
 - **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）、`comment.notify-mail`（邮件通知开关）、`comment.owner-email` / `comment.from-email`
+- **邮件 SMTP**：`mail.host`（必填，留空 = 未配置不发信）、`mail.port`（默认 465）、`mail.username` / `mail.password`、`mail.ssl`（默认 true；false 走 587 STARTTLS）
 - **站点**：`site.url`（文章前台链接与 RSS 用）、`site.name`、`site.birth-date`（页脚运行时长）、`board.title` / `board.summary`
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 - **动态**：`moments.amapKey`（高德逆地理）
 - **存储**：`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl` / `public-read`（见 storage 模块）
 
-> 密钥类配置（access-key / secret-key / api-key）的更新日志自动脱敏为 `***`，不会明文写入日志文件。
+> 密钥类配置（access-key / secret-key / api-key / mail.password）的更新日志自动脱敏为 `***`，不会明文写入日志文件。
 
 ## 审计日志（actionlog）
 

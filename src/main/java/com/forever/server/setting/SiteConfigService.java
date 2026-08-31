@@ -23,12 +23,26 @@ public class SiteConfigService {
     public static final String COMMENT_POST_INTERVAL_SECONDS = "comment.post-interval-seconds";
     /** 新评论是否直接过审（false = 先审后显） */
     public static final String COMMENT_AUTO_APPROVE = "comment.auto-approve";
-    /** 是否开启回复邮件通知（需另行配置 spring.mail.* 基础设施） */
+    /** 是否开启回复邮件通知（需配置 mail.host 等 SMTP 项） */
     public static final String COMMENT_NOTIFY_MAIL = "comment.notify-mail";
     /** 新根评论通知站长的邮箱 */
     public static final String COMMENT_OWNER_EMAIL = "comment.owner-email";
     /** 通知邮件的发件人地址 */
     public static final String COMMENT_FROM_EMAIL = "comment.from-email";
+
+    // ---------- 邮件（SMTP） ----------
+
+    /** SMTP 服务器地址（必填），如 smtp.qq.com；留空表示未配置邮件 */
+    public static final String MAIL_HOST = "mail.host";
+    /** SMTP 端口，默认 465（SSL 直连） */
+    public static final String MAIL_PORT = "mail.port";
+    /** SMTP 登录账号，一般与发件人地址一致 */
+    public static final String MAIL_USERNAME = "mail.username";
+    /** SMTP 登录密码或邮箱授权码 */
+    public static final String MAIL_PASSWORD = "mail.password";
+    /** 是否 SSL 直连（true = 465 直连，false = 587 STARTTLS），默认 true */
+    public static final String MAIL_SSL = "mail.ssl";
+
     /** 站点对外地址，用于拼接文章前台链接与 RSS */
     public static final String SITE_URL = "site.url";
     /** 站点名称，用于 RSS 与邮件发件人等对外署名 */
@@ -67,9 +81,14 @@ public class SiteConfigService {
     private static final Map<String, String> KNOWN_KEYS = Map.ofEntries(
             Map.entry(COMMENT_POST_INTERVAL_SECONDS, "同一 IP 发表评论的最小间隔（秒），0 表示不限流"),
             Map.entry(COMMENT_AUTO_APPROVE, "新评论是否直接过审，false = 先审后显（true/false）"),
-            Map.entry(COMMENT_NOTIFY_MAIL, "是否开启评论邮件通知（true/false，需已配置 spring.mail.*）"),
+            Map.entry(COMMENT_NOTIFY_MAIL, "是否开启评论邮件通知（true/false，需已配置 mail.host 等 SMTP 项）"),
             Map.entry(COMMENT_OWNER_EMAIL, "新根评论通知站长的邮箱"),
             Map.entry(COMMENT_FROM_EMAIL, "通知邮件的发件人地址"),
+            Map.entry(MAIL_HOST, "SMTP 服务器地址（必填），如 smtp.qq.com；留空表示未配置邮件"),
+            Map.entry(MAIL_PORT, "SMTP 端口，默认 465（SSL 直连）"),
+            Map.entry(MAIL_USERNAME, "SMTP 登录账号，一般与发件人地址一致"),
+            Map.entry(MAIL_PASSWORD, "SMTP 登录密码或邮箱授权码"),
+            Map.entry(MAIL_SSL, "是否 SSL 直连（true = 465 直连，false = 587 STARTTLS，默认 true）"),
             Map.entry(SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）"),
             Map.entry(SITE_NAME, "站点名称（用于 RSS 标题与邮件发件人等对外署名）"),
             Map.entry(SITE_BIRTH_DATE, "建站日期，格式 yyyy-MM-dd（前台页脚据此计算运行时长）"),
@@ -92,7 +111,7 @@ public class SiteConfigService {
     private final Map<String, String> cache = new ConcurrentHashMap<>();
     /** 值为密钥的配置项：更新日志中需脱敏，避免明文入日志文件 */
     private static final Set<String> SENSITIVE_KEYS = Set.of(
-            STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, AI_API_KEY);
+            STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, AI_API_KEY, MAIL_PASSWORD);
 
     public SiteConfigService(SiteConfigMapper mapper) {
         this.mapper = mapper;
@@ -188,6 +207,13 @@ public class SiteConfigService {
             throw new BizException(ErrorCode.BAD_REQUEST, "未知的配置项：" + key);
         }
         String trimmed = value.trim();
+        if (trimmed.isEmpty()) {
+            // 留空 = 清除配置、恢复默认值；不做值校验
+            mapper.upsert(key, "");
+            cache.remove(key);
+            log.info("site config cleared: {}", key);
+            return new SettingDtos.SettingResponse(key, trimmed, KNOWN_KEYS.get(key));
+        }
         if (key.equals(COMMENT_POST_INTERVAL_SECONDS)) {
             try {
                 if (Long.parseLong(trimmed) < 0) {
@@ -197,7 +223,7 @@ public class SiteConfigService {
                 throw new BizException(ErrorCode.BAD_REQUEST, "配置值必须为整数");
             }
         } else if (key.equals(COMMENT_AUTO_APPROVE) || key.equals(COMMENT_NOTIFY_MAIL)
-                || key.equals(AI_SUMMARY_ENABLED)) {
+                || key.equals(AI_SUMMARY_ENABLED) || key.equals(MAIL_SSL)) {
             if (!"true".equalsIgnoreCase(trimmed) && !"false".equalsIgnoreCase(trimmed)) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "布尔型配置只接受 true/false");
             }
@@ -206,6 +232,15 @@ public class SiteConfigService {
                 && !trimmed.isEmpty()
                 && !trimmed.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "邮箱格式不正确");
+        } else if (key.equals(MAIL_PORT)) {
+            try {
+                int port = Integer.parseInt(trimmed);
+                if (port < 1 || port > 65535) {
+                    throw new BizException(ErrorCode.BAD_REQUEST, "端口须为 1-65535 之间的整数");
+                }
+            } catch (NumberFormatException e) {
+                throw new BizException(ErrorCode.BAD_REQUEST, "端口须为整数");
+            }
         } else if (key.equals(SITE_URL) && !trimmed.isEmpty() && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "站点地址必须以 http:// 或 https:// 开头");
         } else if (key.equals(SITE_BIRTH_DATE) && !trimmed.isEmpty() && !trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
