@@ -220,15 +220,6 @@ CREATE TABLE moment (
 CREATE INDEX idx_moment_uid ON moment (uid);
 CREATE INDEX idx_moment_created ON moment (created_at);
 
-CREATE TABLE moment_like (
-    moment_id   BIGINT    NOT NULL,
-    uid         BIGINT    NOT NULL,
-    created_at  TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (moment_id, uid)
-);
-
-CREATE INDEX idx_moment_like_uid ON moment_like (uid);
-
 -- Web Push 订阅：浏览器 pushManager.subscribe 结果，endpoint 全局唯一，重复订阅幂等 upsert
 CREATE TABLE push_subscription (
     id                BIGSERIAL PRIMARY KEY,

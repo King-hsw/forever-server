@@ -26,14 +26,12 @@ import java.nio.charset.StandardCharsets;
 import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 动态（朋友圈）：公开时间线、发布/删除（作者或 ADMIN）、点赞、高德逆地理。
+ * 动态（朋友圈）：公开时间线、发布/删除（作者或 ADMIN）、高德逆地理。
  * 媒体引用为前端直传得到的 RustFS 直链，发布时仅做 http(s) 格式校验——
  * 文件状态由存储自持，业务库不记录。
  * 评论复用评论模块（target_type = MOMENT，见 {@link CommentService}）。
@@ -73,7 +71,7 @@ public class MomentService {
 
     /**
      * 动态时间线，created_at 倒序；userUid 可选，只查该用户。
-     * viewerUid 为当前访问者（可空，匿名按 null），liked/canDelete 按其计算。
+     * viewerUid 为当前访问者（可空，匿名按 null），canDelete 按其计算。
      */
     public PageResult<MomentResponse> page(Long viewerUid, Long userUid, int page, int size) {
         int offset = (page - 1) * size;
@@ -86,14 +84,9 @@ public class MomentService {
         List<Long> uids = moments.stream().map(Moment::getUid).distinct().toList();
         Map<Long, SysUser> authorById = sysUserMapper.findByIds(uids).stream()
                 .collect(Collectors.toMap(SysUser::getId, u -> u));
-        Map<Long, Long> likeCountById = momentMapper.likeCountsByMomentIds(ids).stream()
-                .collect(Collectors.toMap(
-                        row -> (Long) row.get("momentId"), row -> (Long) row.get("likeCount")));
         Map<Long, Long> commentCountById = momentMapper.commentCountsByMomentIds(ids).stream()
                 .collect(Collectors.toMap(
                         row -> (Long) row.get("momentId"), row -> (Long) row.get("commentCount")));
-        Set<Long> liked = viewerUid == null ? Set.of()
-                : new HashSet<>(momentMapper.likedMomentIds(viewerUid, ids));
         boolean viewerAdmin = viewerUid != null && rbacService.roleCodesOf(viewerUid).contains("ADMIN");
 
         List<MomentResponse> items = moments.stream().map(m -> {
@@ -107,8 +100,6 @@ public class MomentService {
                     m.getLat() == null ? null : m.getLat().doubleValue(),
                     m.getLng() == null ? null : m.getLng().doubleValue(),
                     m.getCreatedAt(),
-                    likeCountById.getOrDefault(m.getId(), 0L),
-                    liked.contains(m.getId()),
                     commentCountById.getOrDefault(m.getId(), 0L),
                     viewerUid != null && (viewerUid.equals(m.getUid()) || viewerAdmin));
         }).toList();
@@ -153,7 +144,7 @@ public class MomentService {
                 author == null ? null : author.getAvatarUrl(),
                 m.getContent(), new MomentMedia(images, audio, video),
                 m.getLocation(), request.lat(), request.lng(), m.getCreatedAt(),
-                0, false, 0, true);
+                0, true);
     }
 
     public void delete(long uid, Long id) {
@@ -163,25 +154,8 @@ public class MomentService {
             throw new BizException(ErrorCode.FORBIDDEN);
         }
         momentMapper.deleteById(id);
-        momentMapper.deleteByMomentId(id);
         commentMapper.deleteByTarget(MOMENT_TARGET, id);
         log.info("moment deleted: id={}, by={}", id, uid);
-    }
-
-    /** 点赞；重复点幂等 */
-    public MomentDtos.LikeResponse like(long uid, Long momentId) {
-        requireExists(momentId);
-        momentMapper.insertLike(momentId, uid);
-        log.debug("moment liked: momentId={}, uid={}", momentId, uid);
-        return new MomentDtos.LikeResponse(momentMapper.countLikes(momentId), true);
-    }
-
-    /** 取消点赞；未点过幂等 */
-    public MomentDtos.LikeResponse unlike(long uid, Long momentId) {
-        requireExists(momentId);
-        momentMapper.deleteLike(momentId, uid);
-        log.debug("moment unliked: momentId={}, uid={}", momentId, uid);
-        return new MomentDtos.LikeResponse(momentMapper.countLikes(momentId), false);
     }
 
     /**

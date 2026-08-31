@@ -16,7 +16,7 @@
 | `tag` | 文章标签 | tag |
 | `comment` | 评论（文章/留言板/动态三种目标复用一套表） | comment |
 | `sensitive` | 评论敏感词库（内存缓存） | sensitive_word |
-| `moment` | 动态（朋友圈）：时间线、发布、点赞、媒体 | moment / moment_like |
+| `moment` | 动态（朋友圈）：时间线、发布、媒体 | moment |
 | `storage` | 文件存储：RustFS（S3 兼容）读写、直传/分片/续传、媒体资产建档、公开桶直链读取 | — |
 | `rss` | 友博订阅聚合 + 本站 RSS 输出 | rss_feed / rss_item |
 | `friendlink` | 友链申请与审核 | friend_link |
@@ -107,11 +107,10 @@
 
 | 接口 | 说明 |
 |---|---|
-| `GET /api/v1/moments` | 公开时间线（可按 userUid 过滤；liked / canDelete 按访问者计算） |
+| `GET /api/v1/moments` | 公开时间线（可按 userUid 过滤；canDelete 按访问者计算） |
 | `GET /api/v1/moments/geocode` | 高德逆地理（lat/lng → 城市区县文本，未配 key 静默返回空） |
 | `POST /api/admin/moments` | 发布（`moment:post`），内容/图/音/视频至少一项，图片 ≤9 张 |
-| `DELETE /api/admin/moments/{id}` | 删除（作者本人或 ADMIN；级联删点赞与评论） |
-| `POST/DELETE /api/admin/moments/{id}/like` | 点赞 / 取消（仅需登录，幂等） |
+| `DELETE /api/admin/moments/{id}` | 删除（作者本人或 ADMIN；级联删评论） |
 
 统一上传接口（upload 模块，场景化复用，详见「文件存储」）：
 
@@ -124,7 +123,7 @@
 
 > 以上接口统一需要 `upload:upload` 权限码（启动时自动注册，RBAC 分配）——上传是独立模块能力，不随登录自动放行。
 
-要点：媒体白名单（图片 jpg/png/webp/gif ≤5MB、音频 mp3/m4a/wav ≤20MB、视频 mp4/webm ≤100MB），Content-Type 校验与扩展名映射共用一张表；媒体 JSON（images/audio/video）随动态存取；地点文本经高德逆地理（`moments.amapKey`）；时间线批量组装作者/点赞数/评论数避免 N+1。
+要点：媒体白名单（图片 jpg/png/webp/gif ≤5MB、音频 mp3/m4a/wav ≤20MB、视频 mp4/webm ≤100MB），Content-Type 校验与扩展名映射共用一张表；媒体 JSON（images/audio/video）随动态存取；地点文本经高德逆地理（`moments.amapKey`）；时间线批量组装作者/评论数避免 N+1。
 
 ## 文件存储（storage）
 
@@ -199,7 +198,7 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 
 ## 日志
 
-- **级别约定**：`info` 记管理端写操作结果与安全事件（登录成败、改密、登出、权限变更、配置变更）；`debug` 记公开端高频行为（点赞、直传预签、高德失败原因等）与开发排查；`warn` 记预期内失败（校验拒绝、外部服务失败、限流）；`error` 记需人工介入的异常（存储读写失败等）。密钥类配置日志自动脱敏。
+- **级别约定**：`info` 记管理端写操作结果与安全事件（登录成败、改密、登出、权限变更、配置变更）；`debug` 记公开端高频行为（直传预签、高德失败原因等）与开发排查；`warn` 记预期内失败（校验拒绝、外部服务失败、限流）；`error` 记需人工介入的异常（存储读写失败等）。密钥类配置日志自动脱敏。
 - **输出**：开发（dev/default）控制台彩色输出、本项目代码 DEBUG 级；生产（prod）文件 INFO 起、控制台仅 WARN 起。文件按天 + 20MB 滚动，保留 14 天、总量上限 1GB（`logs/forever-server.log`，路径可用 `logging.file.name` 覆盖）。
 
 ---

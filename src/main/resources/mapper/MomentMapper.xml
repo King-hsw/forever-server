@@ -31,38 +31,6 @@
         DELETE FROM moment WHERE id = #{id}
     </delete>
 
-    <!--  点赞  -->
-
-    <select id="countLikes" resultType="int">
-        SELECT COUNT(*) FROM moment_like WHERE moment_id = #{momentId}
-    </select>
-
-    <select id="likedMomentIds" resultType="long">
-        SELECT moment_id FROM moment_like
-        WHERE uid = #{uid} AND moment_id IN
-        <foreach collection="momentIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
-    </select>
-
-    <select id="likeCountsByMomentIds" resultType="map">
-        SELECT moment_id AS "momentId", COUNT(*) AS "likeCount" FROM moment_like
-        WHERE moment_id IN
-        <foreach collection="momentIds" item="mid" open="(" separator="," close=")">#{mid}</foreach>
-        GROUP BY moment_id
-    </select>
-
-    <insert id="insertLike">
-        INSERT INTO moment_like (moment_id, uid) VALUES (#{momentId}, #{uid})
-        ON CONFLICT (moment_id, uid) DO NOTHING
-    </insert>
-
-    <delete id="deleteLike">
-        DELETE FROM moment_like WHERE moment_id = #{momentId} AND uid = #{uid}
-    </delete>
-
-    <delete id="deleteByMomentId">
-        DELETE FROM moment_like WHERE moment_id = #{momentId}
-    </delete>
-
     <!--  动态评论数（已过审，target_type = MOMENT）  -->
 
     <select id="commentCountsByMomentIds" resultType="map">

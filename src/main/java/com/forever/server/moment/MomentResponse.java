@@ -16,8 +16,6 @@ public record MomentResponse(
         @Schema(description = "纬度，可为 null") Double lat,
         @Schema(description = "经度，可为 null") Double lng,
         @Schema(description = "发布时间，ISO 8601") LocalDateTime createdAt,
-        long likeCount,
-        @Schema(description = "当前访问者（登录时）是否已赞；匿名恒 false") boolean liked,
         @Schema(description = "已过审评论数") long commentCount,
         @Schema(description = "作者或 ADMIN 角色可删；匿名恒 false") boolean canDelete) {
 }

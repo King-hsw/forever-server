@@ -21,21 +21,6 @@ public interface MomentMapper {
 
     int deleteById(Long id);
 
-    // ---------- 点赞 ----------
-
-    int countLikes(@Param("momentId") long momentId);
-
-    List<Long> likedMomentIds(@Param("uid") long uid, @Param("momentIds") List<Long> momentIds);
-
-    List<Map<String, Object>> likeCountsByMomentIds(@Param("momentIds") List<Long> momentIds);
-
-    /** 幂等插入；已存在静默忽略 */
-    int insertLike(@Param("momentId") long momentId, @Param("uid") long uid);
-
-    int deleteLike(@Param("momentId") long momentId, @Param("uid") long uid);
-
-    int deleteByMomentId(long momentId);
-
     /** 批量取已过审评论数（MOMENT 评论共用 comment 表） */
     List<Map<String, Object>> commentCountsByMomentIds(@Param("momentIds") List<Long> momentIds);
 }

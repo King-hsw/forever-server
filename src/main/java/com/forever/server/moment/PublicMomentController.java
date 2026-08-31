@@ -26,7 +26,7 @@ import java.util.Optional;
 
 /**
  * 动态时间线：公开（SSR、免登录），查看无需登录；
- * 发布/删除/点赞见 {@link AdminMomentController}（登录 + RBAC）。
+ * 发布/删除见 {@link AdminMomentController}（登录 + RBAC）。
  */
 @Tag(name = "动态·公开接口", description = "访客查看动态与评论，无需登录")
 @RestController
@@ -40,7 +40,7 @@ public class PublicMomentController {
         this.commentService = commentService;
     }
 
-    @Operation(summary = "分页查看动态", description = "created_at 倒序；user 可选，只查该用户的动态；liked/canDelete 按当前登录态计算")
+    @Operation(summary = "分页查看动态", description = "created_at 倒序；user 可选，只查该用户的动态；canDelete 按当前登录态计算")
     @GetMapping("/api/v1/moments")
     public ApiResponse<PageResult<MomentResponse>> list(
             @Parameter(description = "页码，从 1 开始", example = "1") @RequestParam(defaultValue = "1") int page,
