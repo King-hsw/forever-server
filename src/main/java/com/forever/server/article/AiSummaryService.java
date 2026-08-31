@@ -1,8 +1,5 @@
 package com.forever.server.article;
 
-import com.openai.client.OpenAIClient;
-import com.openai.client.OpenAIClientImpl;
-import com.openai.core.ClientOptions;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.setting.SiteConfigService;
@@ -10,7 +7,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
 import org.springframework.ai.openai.OpenAiChatOptions;
-import org.springframework.ai.openai.http.okhttp.SpringAiOpenAiHttpClient;
 import org.springframework.stereotype.Service;
 
 /**
@@ -66,14 +62,14 @@ public class AiSummaryService {
 
     private String callModel(SiteConfigService cfg, String title, String content) {
         try {
-            OpenAIClient client = new OpenAIClientImpl(new ClientOptions.Builder()
-                    .httpClient(SpringAiOpenAiHttpClient.builder().build())
-                    .baseUrl(cfg.aiBaseUrl())
-                    .apiKey(cfg.aiApiKey())
-                    .build());
+            // baseUrl/apiKey 必须写在 options 上：OpenAiChatModel 按 options 构建同步+异步客户端，
+            // 只塞自建 client 时 options 缺 apiKey 会在 build() 抛 credential 缺失
             OpenAiChatModel model = OpenAiChatModel.builder()
-                    .openAiClient(client)
-                    .options(OpenAiChatOptions.builder().model(cfg.aiModel()).build())
+                    .options(OpenAiChatOptions.builder()
+                            .baseUrl(cfg.aiBaseUrl())
+                            .apiKey(cfg.aiApiKey())
+                            .model(cfg.aiModel())
+                            .build())
                     .build();
             return model.call(new Prompt(INSTRUCTION.formatted(title, content)))
                     .getResult().getOutput().getText().trim();
