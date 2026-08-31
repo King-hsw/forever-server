@@ -15,6 +15,7 @@
 | `category` | 文章分类 | category |
 | `tag` | 文章标签 | tag |
 | `comment` | 评论（文章/留言板/动态三种目标复用一套表） | comment |
+| `message` | 消息中心：登录账号的站内消息收件箱（单向通知） | message |
 | `sensitive` | 评论敏感词库（内存缓存） | sensitive_word |
 | `moment` | 动态（朋友圈）：时间线、发布、媒体 | moment |
 | `storage` | 文件存储：RustFS（S3 兼容）读写、直传/分片/续传、媒体资产建档、公开桶直链读取 | — |
@@ -26,7 +27,7 @@
 | `common` | 统一响应、异常、分页、slug、工具类 | — |
 | `config` | Security / Web MVC / 启动期配置绑定 | — |
 
-迁移脚本为单文件基线 `src/main/resources/db/migration/V1__init.sql`（原 V1–V25 增量脚本的合并净结构），启动时 Flyway 自动执行。
+迁移脚本：基线 `src/main/resources/db/migration/V1__init.sql`（原 V1–V25 增量脚本的合并净结构）+ 后续 `V2__*.sql` 增量（如 message 表、comment.user_id），启动时 Flyway 自动执行。
 
 ---
 
@@ -100,8 +101,21 @@
 - 游客发评需昵称 + 邮箱（头像走 Gravatar）；**登录用户在动态下自动以 sys_user 资料发言，邮箱可为空**
 - 写入前敏感词替换（`sensitive` 模块，词库内存缓存即时生效，`/api/admin/sensitive-words` 维护，未配替换字默认打码 `***`）
 - 是否直接过审（`comment.auto-approve`）、同 IP 发评最小间隔（`comment.post-interval-seconds`，0 不限流）由站点设置控制，默认直接过审、间隔 10 秒
-- 落库后触发邮件通知（回复通知被回复者、新根评论通知站长，`comment.notify-mail` / `comment.owner-email`），**通知失败绝不影响评论**
+- 落库后发布 `CommentCreatedEvent`：邮件/Web Push 通知（回复通知被回复者、新根评论通知站长，`comment.notify-mail` / `comment.owner-email` 控制）与站内消息（见 message 模块）各自订阅，**通知失败绝不影响评论**
 - 管理端删除评论级联删除楼内回复
+
+## 消息中心（message）
+
+站内消息收件箱：收件人是登录账号（sys_user），单向通知（不建会话）。订阅评论创建事件：回复 → 原评论人、根评论 → 站长，自己评自己不写。
+
+| 接口 | 说明 |
+|---|---|
+| `GET /api/v1/messages` | 本人消息列表（登录态） |
+| `GET /api/v1/messages/unread-count` | 未读数 |
+| `PUT /api/v1/messages/{id}/read`、`PUT /api/v1/messages/read-all` | 标记已读 |
+| `DELETE /api/v1/messages/{id}` | 删除单条（软删） |
+
+要点：`/api/v1/**` 默认放行，各端点自行校验登录态（匿名 401）；收件箱是记录，不受 `comment.notify-mail` 开关控制。
 
 ## 动态（moment）
 

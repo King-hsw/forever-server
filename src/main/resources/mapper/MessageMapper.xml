@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.forever.server.message.MessageMapper">
+
+    <insert id="insert" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO message (user_id, type, content, source_url)
+        VALUES (#{userId}, #{type}, #{content}, #{sourceUrl})
+    </insert>
+
+    <select id="pageByUser" resultType="com.forever.server.message.Message">
+        SELECT * FROM message WHERE user_id = #{userId} AND deleted = false
+        ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByUser" resultType="long">
+        SELECT COUNT(*) FROM message WHERE user_id = #{userId} AND deleted = false
+    </select>
+
+    <select id="countUnread" resultType="long">
+        SELECT COUNT(*) FROM message WHERE user_id = #{userId} AND deleted = false AND is_read = false
+    </select>
+
+    <update id="markRead">
+        UPDATE message SET is_read = true WHERE id = #{id} AND user_id = #{userId}
+    </update>
+
+    <update id="markAllRead">
+        UPDATE message SET is_read = true WHERE user_id = #{userId} AND is_read = false
+    </update>
+
+    <update id="softDelete">
+        UPDATE message SET deleted = true WHERE id = #{id} AND user_id = #{userId}
+    </update>
+</mapper>

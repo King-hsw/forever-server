@@ -17,6 +17,8 @@ public class Comment {
     private Long targetId;
     private Long parentId;
     private Long rootId;
+    /** 归属账号（登录用户发评时写入，游客为空）；站内消息按此定位收件人 */
+    private Long userId;
     private String nickname;
     /** 不对外展示，仅用于头像生成与回复邮件通知 */
     private String email;

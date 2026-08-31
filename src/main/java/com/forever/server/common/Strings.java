@@ -20,6 +20,12 @@ public final class Strings {
         return s.length() <= max ? s : s.substring(0, max);
     }
 
+    /** 压平空白后截断（通知摘要用：看不完整内容，点击进页面） */
+    public static String excerpt(String s, int max) {
+        String flat = (s == null ? "" : s).replaceAll("\\s+", " ").trim();
+        return flat.length() <= max ? flat : flat.substring(0, max) + "…";
+    }
+
     /** 校验并返回合法的 http(s) 地址 */
     public static String checkHttpUrl(String url, String label) {
         try {

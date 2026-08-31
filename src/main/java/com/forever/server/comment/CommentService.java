@@ -13,6 +13,7 @@ import com.forever.server.moment.MomentMapper;
 import com.forever.server.sensitive.SensitiveWordService;
 import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
@@ -29,7 +30,8 @@ import java.util.stream.Collectors;
  * 评论核心业务：一套 Comment 表支撑三种目标（target_type = ARTICLE / BOARD / MOMENT），
  * 组装两层楼（根评论倒序、楼内回复正序）。游客发评要求昵称+邮箱，登录用户在动态下
  * 自动以 sys_user 资料身份发言；写入前做敏感词替换（{@link SensitiveWordService#mask}），
- * 是否直接过审、同 IP 发评间隔均由站点设置控制；落库后触发邮件通知（失败不影响评论）。
+ * 是否直接过审、同 IP 发评间隔均由站点设置控制；落库后发布 CommentCreatedEvent
+ *（邮件 / Web Push / 站内消息等渠道各自订阅，失败不影响评论）。
  */
 @Slf4j
 @Service
@@ -48,8 +50,8 @@ public class CommentService {
     private final MomentMapper momentMapper;
     private final SensitiveWordService sensitiveWordService;
     private final SiteConfigService siteConfig;
-    private final CommentNotifyService notifyService;
     private final SysUserMapper sysUserMapper;
+    private final ApplicationEventPublisher eventPublisher;
     /** IP -> 上次发评时间，简单内存限流（单实例够用） */
     private final Map<String, LocalDateTime> lastPostByIp = new ConcurrentHashMap<>();
 
@@ -58,15 +60,15 @@ public class CommentService {
                           MomentMapper momentMapper,
                           SensitiveWordService sensitiveWordService,
                           SiteConfigService siteConfig,
-                          CommentNotifyService notifyService,
-                          SysUserMapper sysUserMapper) {
+                          SysUserMapper sysUserMapper,
+                          ApplicationEventPublisher eventPublisher) {
         this.commentMapper = commentMapper;
         this.articleMapper = articleMapper;
         this.momentMapper = momentMapper;
         this.sensitiveWordService = sensitiveWordService;
         this.siteConfig = siteConfig;
-        this.notifyService = notifyService;
         this.sysUserMapper = sysUserMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     // ---------- 公开端 ----------
@@ -175,6 +177,7 @@ public class CommentService {
         comment.setParentId(parent == null ? null : parent.getId());
         comment.setRootId(parent == null ? null
                 : (parent.getRootId() != null ? parent.getRootId() : parent.getId()));
+        comment.setUserId(identity.uid());
         comment.setNickname(identity.nickname());
         comment.setEmail(identity.email());
         comment.setSite(identity.site());
@@ -194,8 +197,8 @@ public class CommentService {
         log.info("comment created: id={}, targetType={}, parentId={}, status={}, ip={}",
                 comment.getId(), targetType, comment.getParentId(), comment.getStatus(), ip);
 
-        // 通知失败不影响已落库的评论（notify 内部自捕获异常）
-        notifyService.onCommentCreated(comment, parent, sourceTitle, sourceUrl);
+        // 通知渠道各自订阅并自捕获异常，失败不影响已落库的评论
+        eventPublisher.publishEvent(new CommentCreatedEvent(comment, parent, sourceTitle, sourceUrl));
         return toAdminResponse(comment);
     }
 
@@ -224,8 +227,8 @@ public class CommentService {
 
     // ---------- internal ----------
 
-    /** 发言身份：昵称 + 邮箱（可为空，登录用户资料未填时）+ 主页 */
-    private record Identity(String nickname, String email, String site) {
+    /** 发言身份：归属账号 uid（游客为空）+ 昵称 + 邮箱（可为空，登录用户资料未填时）+ 主页 */
+    private record Identity(Long uid, String nickname, String email, String site) {
     }
 
     /** 游客身份：取自请求体；DB 允许邮箱为空（登录用户），游客仍显式要求 */
@@ -233,7 +236,7 @@ public class CommentService {
         if (request.email() == null || request.email().isBlank()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "邮箱不能为空");
         }
-        return new Identity(request.nickname().trim(), request.email().trim(), Strings.blankToNull(request.site()));
+        return new Identity(null, request.nickname().trim(), request.email().trim(), Strings.blankToNull(request.site()));
     }
 
     /** 登录用户身份：取自 sys_user，忽略请求体携带的身份字段（昵称缺省回落用户名） */
@@ -243,7 +246,7 @@ public class CommentService {
             throw new BizException(ErrorCode.UNAUTHORIZED, "登录用户不存在");
         }
         String nickname = Strings.blankToNull(user.getNickname());
-        return new Identity(nickname != null ? nickname.trim() : user.getUsername(),
+        return new Identity(uid, nickname != null ? nickname.trim() : user.getUsername(),
                 Strings.blankToNull(user.getEmail()), Strings.blankToNull(user.getSite()));
     }
 

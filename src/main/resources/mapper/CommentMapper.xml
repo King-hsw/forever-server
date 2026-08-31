@@ -8,8 +8,8 @@
     </sql>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO comment (target_type, target_id, parent_id, root_id, nickname, email, site, content, status, ip)
-        VALUES (#{targetType}, #{targetId}, #{parentId}, #{rootId}, #{nickname}, #{email},
+        INSERT INTO comment (target_type, target_id, parent_id, root_id, user_id, nickname, email, site, content, status, ip)
+        VALUES (#{targetType}, #{targetId}, #{parentId}, #{rootId}, #{userId}, #{nickname}, #{email},
                 #{site}, #{content}, #{status}, #{ip})
     </insert>
 
