@@ -2,7 +2,7 @@ package com.forever.server.upload;
 
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
-import com.forever.server.storage.StorageService;
+import com.forever.server.storage.RustFsStorageService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -60,9 +60,9 @@ public class UploadService {
     static final String WHITELIST_HINT =
             "仅支持 jpg / png / webp / gif 图片、mp3 / m4a / wav 音频、mp4 / webm / mkv 视频";
 
-    private final StorageService storage;
+    private final RustFsStorageService storage;
 
-    public UploadService(StorageService storage) {
+    public UploadService(RustFsStorageService storage) {
         this.storage = storage;
     }
 
@@ -74,7 +74,7 @@ public class UploadService {
     public UploadDtos.CheckResponse check(String contentTypeRaw, String md5) {
         String contentType = normalizeContentType(contentTypeRaw);
         String key = requireMd5(md5) + requireWhitelisted(contentType);
-        StorageService.Stat stat = storage.stat(key);
+        RustFsStorageService.Stat stat = storage.stat(key);
         boolean exists = stat != null;
         log.info("upload checked: key={}, exists={}", key, exists);
         return new UploadDtos.CheckResponse(exists,
@@ -125,13 +125,13 @@ public class UploadService {
     public UploadDtos.MultipartCompleteResponse complete(String key, String uploadId) {
         requireValidKey(key);
         String contentType = contentTypeOfKey(key);
-        List<StorageService.PartDigest> parts = new ArrayList<>(listAliveParts(key, uploadId));
-        parts.sort(Comparator.comparingInt(StorageService.PartDigest::partNumber));
+        List<RustFsStorageService.PartDigest> parts = new ArrayList<>(listAliveParts(key, uploadId));
+        parts.sort(Comparator.comparingInt(RustFsStorageService.PartDigest::partNumber));
 
         // 无状态校验：非末片必须等于固定 8MB（S3 也强制 ≥5MB），末片 ≤8MB 且 >0，总量 ≤ 上限
         long total = 0;
         for (int i = 0; i < parts.size(); i++) {
-            StorageService.PartDigest part = parts.get(i);
+            RustFsStorageService.PartDigest part = parts.get(i);
             if (part.partNumber() != i + 1) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "分片序号不连续，请重新上传");
             }
@@ -166,11 +166,11 @@ public class UploadService {
     /**
      * 分片对账；uploadId 已失效（不存在/已被覆盖完成）返回业务异常，前端重新走 init
      */
-    private List<StorageService.PartDigest> listAliveParts(String key, String uploadId) {
+    private List<RustFsStorageService.PartDigest> listAliveParts(String key, String uploadId) {
         if (key == null || key.isBlank() || uploadId == null || uploadId.isBlank()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "缺少 key 或 uploadId");
         }
-        List<StorageService.PartDigest> parts = storage.listParts(key, uploadId);
+        List<RustFsStorageService.PartDigest> parts = storage.listParts(key, uploadId);
         if (parts == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "分片会话已失效，请重新上传");
         }
