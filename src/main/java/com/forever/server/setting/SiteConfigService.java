@@ -77,7 +77,7 @@ public class SiteConfigService {
             Map.entry(BOARD_SUMMARY, "留言板简介"),
             Map.entry(AI_SUMMARY_ENABLED, "AI 文章概要总开关（true/false），还需配置 ai.api-key 才生效"),
             Map.entry(AI_API_KEY, "AI 服务的 API Key（OpenAI 兼容接口）"),
-            Map.entry(AI_BASE_URL, "AI 服务地址（OpenAI 兼容接口，默认 https://api.openai.com）"),
+            Map.entry(AI_BASE_URL, "AI 服务地址（OpenAI 兼容接口的 API 根地址，客户端自动追加 /chat/completions；OpenAI 官方为 https://api.openai.com/v1）"),
             Map.entry(AI_MODEL, "AI 模型名（如 gpt-4o-mini / deepseek-chat，默认 gpt-4o-mini）"),
             Map.entry(MOMENTS_AMAP_KEY, "高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null）"),
             Map.entry(STORAGE_ENDPOINT, "对象存储 S3 API 地址（必填），如 http://127.0.0.1:9000"),
@@ -176,7 +176,7 @@ public class SiteConfigService {
     }
 
     public String aiBaseUrl() {
-        return getString(AI_BASE_URL, "https://api.openai.com");
+        return getString(AI_BASE_URL, "https://api.openai.com/v1");
     }
 
     public String aiModel() {
