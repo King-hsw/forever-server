@@ -19,3 +19,6 @@ local/*
 
 # 运行时上传目录（本地生成，不入仓）
 data/uploads/
+
+# Local dev worktrees
+.worktrees/
