@@ -30,9 +30,6 @@ jobs:
       - name: 镜像名转小写
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
-      - name: 校验 Docker Hub 镜像名变量
-        run: test -n "${{ vars.DOCKERHUB_IMAGE }}" || { echo "请先在仓库 Settings → Variables 配置 DOCKERHUB_IMAGE（全小写，如 xxx/forever-server）"; exit 1; }
-
       - uses: actions/checkout@v4
 
       - uses: docker/setup-buildx-action@v3
@@ -43,21 +40,13 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: 构建并按摘要推送
         id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           platforms: ${{ matrix.platform }}
-          outputs: |
-            type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
-            type=image,name=${{ vars.DOCKERHUB_IMAGE }},push-by-digest=true,name-canonical=true,push=true
+          outputs: type=image,name=${{ env.IMAGE }},push-by-digest=true,name-canonical=true,push=true
           cache-from: type=gha,scope=build-${{ matrix.short }}
           cache-to: type=gha,scope=build-${{ matrix.short }},mode=max
 
@@ -100,12 +89,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - uses: docker/login-action@v3
-        with:
-          registry: docker.io
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
-
       - name: 创建多架构清单并推送
         working-directory: /tmp/digests
         run: |
@@ -114,21 +97,48 @@ jobs:
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
             TAGS="$TAGS -t $IMAGE:${GITHUB_REF#refs/tags/}"
           fi
-          docker buildx imagetools create $TAGS \
-            $(printf "$IMAGE@sha256:%s " *)
-
-      - name: 创建 Docker Hub 多架构清单并推送
-        working-directory: /tmp/digests
-        run: |
-          DH_IMAGE="${{ vars.DOCKERHUB_IMAGE }}"
-          TAGS="-t $DH_IMAGE:latest"
-          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-            TAGS="$TAGS -t $DH_IMAGE:${GITHUB_REF#refs/tags/}"
-          fi
-          docker buildx imagetools create $TAGS \
-            $(printf "$DH_IMAGE@sha256:%s " *)
+          # 刚按摘要推送的清单要一会儿才能按摘要读到（GHCR 最终一致性延迟），带重试
+          ok=0
+          for i in 1 2 3 4 5 6; do
+            if docker buildx imagetools create $TAGS $(printf "$IMAGE@sha256:%s " *); then ok=1; break; fi
+            echo "::warning::摘要暂不可读（GHCR 一致性延迟），15s 后重试（$i/6）"
+            sleep 15
+          done
+          [[ $ok == 1 ]] || exit 1
 
       - name: 检查清单
+        run: docker buildx imagetools inspect $IMAGE:latest
+
+  dockerhub:
+    # GHCR 发布完成后，把现成的多架构镜像整体复制到 Docker Hub（不重建）。
+    # 独立 job：失败不影响 GHCR，可单独重跑；以后加 registry 照此再加 job
+    needs: merge
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: 安装 skopeo
+        run: sudo apt-get update -y && sudo apt-get install -y skopeo
+
+      - name: 复制镜像到 Docker Hub
+        env:
+          DH_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
+          DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
+          DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
-          docker buildx imagetools inspect $IMAGE:latest
-          docker buildx imagetools inspect "${{ vars.DOCKERHUB_IMAGE }}:latest"
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          test -n "$DH_IMAGE" || { echo "请先在仓库 Settings → Variables 配置 DOCKERHUB_IMAGE（全小写，如 xxx/forever-server）"; exit 1; }
+          echo "$GITHUB_TOKEN" | skopeo login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
+          echo "$DH_TOKEN" | skopeo login docker.io -u "$DH_USER" --password-stdin
+          TAGS=(latest)
+          [[ "$GITHUB_REF" == refs/tags/v* ]] && TAGS+=("${GITHUB_REF#refs/tags/}")
+          for TAG in "${TAGS[@]}"; do
+            ok=0
+            for i in 1 2 3; do
+              # 跨 runner 刚打的 tag 也可能有短暂一致性延迟
+              if skopeo copy --all "docker://$IMAGE:$TAG" "docker://$DH_IMAGE:$TAG"; then ok=1; break; fi
+              sleep 10
+            done
+            [[ $ok == 1 ]] || { echo "skopeo copy $IMAGE:$TAG → $DH_IMAGE:$TAG 重试 3 次仍失败" >&2; exit 1; }
+          done
