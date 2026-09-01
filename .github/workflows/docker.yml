@@ -1,9 +1,9 @@
 name: Build and Push Docker Image
 
-# 只在发布时构建：push release 分支、打 v* 标签，或手动触发
+# push main/release 分支、打 v* 标签，或手动触发
 on:
   push:
-    branches: [release]
+    branches: [main, release]
     tags: ['v*']
   workflow_dispatch:
 
