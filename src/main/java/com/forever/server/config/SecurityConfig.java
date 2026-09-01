@@ -96,7 +96,10 @@ public class SecurityConfig {
                 .addFilterBefore(authTokenFilter, UsernamePasswordAuthenticationFilter.class)
                 .exceptionHandling(ex -> ex
                         .authenticationEntryPoint((req, res, e) -> {
-                            log.warn("unauthenticated request rejected: {} {}", req.getMethod(), req.getRequestURI());
+                            // 带上 UA/Referer：定位是哪个客户端（浏览器/PWA/爬虫/探测）在请求被拒路径
+                            log.warn("unauthenticated request rejected: {} {} (ua={}, referer={})",
+                                    req.getMethod(), req.getRequestURI(),
+                                    req.getHeader("User-Agent"), req.getHeader("Referer"));
                             writeJson(res, HttpServletResponse.SC_UNAUTHORIZED, UNAUTHORIZED_BODY);
                         })
                         .accessDeniedHandler((req, res, e) -> {
