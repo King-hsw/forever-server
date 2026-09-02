@@ -2,6 +2,7 @@ package com.forever.server.storage;
 
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -10,18 +11,7 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3Configuration;
-import software.amazon.awssdk.services.s3.model.CompleteMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.CompletedMultipartUpload;
-import software.amazon.awssdk.services.s3.model.CompletedPart;
-import software.amazon.awssdk.services.s3.model.CreateMultipartUploadRequest;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.ExpirationStatus;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.ListPartsRequest;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.model.NoSuchUploadException;
-import software.amazon.awssdk.services.s3.model.UploadPartRequest;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.*;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.UploadPartPresignRequest;
@@ -42,29 +32,34 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RustFsStorageService {
 
-    /** 分片摘要：listParts 返回、completeMultipart 消费 */
+    /**
+     * 分片摘要：listParts 返回、completeMultipart 消费
+     */
     public record PartDigest(int partNumber, long size, String etag) {
     }
 
-    /** 对象元数据快照（转正时校验大小/类型用） */
+    /**
+     * 对象元数据快照（转正时校验大小/类型用）
+     */
     public record Stat(String contentType, long size) {
     }
 
     private final StorageSettings settings;
 
-    /** S3 客户端 + 预签名器 + 构建时所依据的目标元组（元组变化即重建） */
+    /**
+     * S3 客户端 + 预签名器 + 构建时所依据的目标元组（元组变化即重建）
+     */
     private record Bundle(StorageSettings.S3Target target, S3Client s3, S3Presigner presigner) {
     }
 
     private volatile Bundle bundle;
 
-    public RustFsStorageService(StorageSettings settings) {
-        this.settings = settings;
-    }
-
-    /** 获取与当前配置一致的客户端；双检锁避免每次调用都进入同步块 */
+    /**
+     * 获取与当前配置一致的客户端；双检锁避免每次调用都进入同步块
+     */
     private Bundle bundle() {
         StorageSettings.S3Target target = settings.s3Target();
         Bundle b = bundle;
@@ -111,7 +106,9 @@ public class RustFsStorageService {
         return built;
     }
 
-    /** 保存文件。relativePath 即对象 key，返回其直链。输入流由本类负责关闭 */
+    /**
+     * 保存文件。relativePath 即对象 key，返回其直链。输入流由本类负责关闭
+     */
     public String save(String relativePath, String contentType, InputStream in, long size) {
         Bundle b = bundle();
         try {
@@ -131,7 +128,9 @@ public class RustFsStorageService {
         return directUrlOf(relativePath);
     }
 
-    /** 删除已保存文件；对象不存在时静默，失败仅告警不抛出 */
+    /**
+     * 删除已保存文件；对象不存在时静默，失败仅告警不抛出
+     */
     public void delete(String relativePath) {
         Bundle b = bundle();
         try {
@@ -142,12 +141,16 @@ public class RustFsStorageService {
         }
     }
 
-    /** 预签名 URL 有效期（直传 PUT 与分片共用） */
+    /**
+     * 预签名 URL 有效期（直传 PUT 与分片共用）
+     */
     public Duration presignTtl() {
         return settings.presignTtl();
     }
 
-    /** 签发限时直传 PUT URL，前端携带与 contentType 一致的 Content-Type 头裸 PUT 文件体 */
+    /**
+     * 签发限时直传 PUT URL，前端携带与 contentType 一致的 Content-Type 头裸 PUT 文件体
+     */
     public String presignPutUrl(String key, String contentType, Duration ttl) {
         Bundle b = bundle();
         var presigned = b.presigner().presignPutObject(PutObjectPresignRequest.builder()
@@ -162,13 +165,17 @@ public class RustFsStorageService {
         return presigned.url().toString();
     }
 
-    /** 对象公网直链：{endpoint}/{bucket}/{key}（按当前配置即时拼出） */
+    /**
+     * 对象公网直链：{endpoint}/{bucket}/{key}（按当前配置即时拼出）
+     */
     public String directUrlOf(String key) {
         StorageSettings.S3Target target = settings.s3Target();
         return target.endpoint().replaceAll("/+$", "") + "/" + target.bucket() + "/" + key;
     }
 
-    /** 对象元数据；对象不存在返回 null */
+    /**
+     * 对象元数据；对象不存在返回 null
+     */
     public Stat stat(String key) {
         Bundle b = bundle();
         try {
@@ -180,7 +187,9 @@ public class RustFsStorageService {
         }
     }
 
-    /** 初始化分片上传，返回 uploadId；Content-Type 在此确定并保留到最终对象 */
+    /**
+     * 初始化分片上传，返回 uploadId；Content-Type 在此确定并保留到最终对象
+     */
     public String createMultipart(String key, String contentType) {
         Bundle b = bundle();
         try {
@@ -196,7 +205,9 @@ public class RustFsStorageService {
         }
     }
 
-    /** 已上传分片清单（分片号/大小/ETag），断点续传对账与 complete 组装都用它 */
+    /**
+     * 已上传分片清单（分片号/大小/ETag），断点续传对账与 complete 组装都用它
+     */
     public List<PartDigest> listParts(String key, String uploadId) {
         Bundle b = bundle();
         try {
@@ -211,7 +222,9 @@ public class RustFsStorageService {
         }
     }
 
-    /** 按清单收尾，分片合并为正式对象 */
+    /**
+     * 按清单收尾，分片合并为正式对象
+     */
     public void completeMultipart(String key, String uploadId, List<PartDigest> parts) {
         Bundle b = bundle();
         try {
@@ -230,7 +243,9 @@ public class RustFsStorageService {
         }
     }
 
-    /** 预签名单个分片的直传 PUT URL */
+    /**
+     * 预签名单个分片的直传 PUT URL
+     */
     public String presignUploadPartUrl(String key, String uploadId, int partNumber, Duration ttl) {
         Bundle b = bundle();
         var presigned = b.presigner().presignUploadPart(UploadPartPresignRequest.builder()

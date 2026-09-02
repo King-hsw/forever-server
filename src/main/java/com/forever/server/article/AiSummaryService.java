@@ -3,6 +3,7 @@ package com.forever.server.article;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.setting.SiteConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.openai.OpenAiChatModel;
@@ -16,17 +17,20 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AiSummaryService {
 
-    /** 送入模型的正文字符上限，超出截断 */
+    /**
+     * 送入模型的正文字符上限，超出截断
+     */
     private static final int MAX_CONTENT_CHARS = 8000;
 
     private static final String INSTRUCTION = """
             你是博客文章编辑。请阅读下面的文章内容，用中文写一段不超过 120 字的摘要，
             作为文章列表页展示的概要。只输出摘要纯文本，不要任何前缀、引号或解释。
-
+            
             文章标题：%s
-
+            
             正文：
             %s
             """;
@@ -34,12 +38,9 @@ public class AiSummaryService {
     private final ArticleMapper articleMapper;
     private final SiteConfigService siteConfig;
 
-    public AiSummaryService(ArticleMapper articleMapper, SiteConfigService siteConfig) {
-        this.articleMapper = articleMapper;
-        this.siteConfig = siteConfig;
-    }
-
-    /** 生成概要并保存，返回新概要文本 */
+    /**
+     * 生成概要并保存，返回新概要文本
+     */
     public String generate(Long articleId) {
         if (!siteConfig.aiSummaryEnabled()) {
             throw new BizException(ErrorCode.CONFLICT, "AI 概要功能未开启或未配置 API Key");

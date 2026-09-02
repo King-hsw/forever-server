@@ -4,7 +4,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** sys_auth_token 单行记录（token 存的是 SHA-256 哈希） */
+/**
+ * sys_auth_token 单行记录（token 存的是 SHA-256 哈希）
+ */
 @Data
 public class SysAuthToken {
 

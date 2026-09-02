@@ -10,37 +10,59 @@
 
     <update id="update">
         UPDATE friend_link
-        SET name = #{name}, site_url = #{siteUrl}, icon_url = #{iconUrl},
-            description = #{description}, status = #{status},
+        SET name          = #{name},
+            site_url      = #{siteUrl},
+            icon_url      = #{iconUrl},
+            description   = #{description},
+            status        = #{status},
             reject_reason = #{rejectReason}
         WHERE id = #{id}
     </update>
 
     <delete id="deleteById">
-        DELETE FROM friend_link WHERE id = #{id}
+        DELETE
+        FROM friend_link
+        WHERE id = #{id}
     </delete>
 
     <select id="findById" resultType="com.forever.server.friendlink.FriendLink">
-        SELECT * FROM friend_link WHERE id = #{id}
+        SELECT *
+        FROM friend_link
+        WHERE id = #{id}
     </select>
 
     <select id="findAll" resultType="com.forever.server.friendlink.FriendLink">
-        SELECT * FROM friend_link ORDER BY status ASC, created_at DESC
+        SELECT *
+        FROM friend_link
+        ORDER BY status ASC, created_at DESC
     </select>
 
     <select id="findApproved" resultType="com.forever.server.friendlink.FriendLink">
-        SELECT * FROM friend_link WHERE status = 'APPROVED' ORDER BY created_at ASC
+        SELECT *
+        FROM friend_link
+        WHERE status = 'APPROVED'
+        ORDER BY created_at ASC
     </select>
 
     <select id="countBySiteUrl" resultType="long">
-        SELECT COUNT(*) FROM friend_link WHERE site_url = #{siteUrl}
+        SELECT COUNT(*)
+        FROM friend_link
+        WHERE site_url = #{siteUrl}
     </select>
 
     <update id="approve">
-        UPDATE friend_link SET status = 'APPROVED', reject_reason = NULL, reviewed_at = #{now} WHERE id = #{id}
+        UPDATE friend_link
+        SET status        = 'APPROVED',
+            reject_reason = NULL,
+            reviewed_at   = #{now}
+        WHERE id = #{id}
     </update>
 
     <update id="reject">
-        UPDATE friend_link SET status = 'REJECTED', reject_reason = #{reason}, reviewed_at = #{now} WHERE id = #{id}
+        UPDATE friend_link
+        SET status        = 'REJECTED',
+            reject_reason = #{reason},
+            reviewed_at   = #{now}
+        WHERE id = #{id}
     </update>
 </mapper>

@@ -4,41 +4,60 @@
 <mapper namespace="com.forever.server.category.CategoryMapper">
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO category (name, slug, sort) VALUES (#{name}, #{slug}, #{sort})
+        INSERT INTO category (name, slug, sort)
+        VALUES (#{name}, #{slug}, #{sort})
     </insert>
 
     <update id="update">
-        UPDATE category SET name = #{name}, slug = #{slug}, sort = #{sort} WHERE id = #{id}
+        UPDATE category
+        SET name = #{name},
+            slug = #{slug},
+            sort = #{sort}
+        WHERE id = #{id}
     </update>
 
     <delete id="deleteById">
-        DELETE FROM category WHERE id = #{id}
+        DELETE
+        FROM category
+        WHERE id = #{id}
     </delete>
 
     <select id="findById" resultType="com.forever.server.category.Category">
-        SELECT * FROM category WHERE id = #{id}
+        SELECT *
+        FROM category
+        WHERE id = #{id}
     </select>
 
     <select id="countByName" resultType="long">
-        SELECT COUNT(*) FROM category WHERE name = #{name}
+        SELECT COUNT(*)
+        FROM category
+        WHERE name = #{name}
     </select>
 
     <select id="countBySlug" resultType="long">
-        SELECT COUNT(*) FROM category WHERE slug = #{slug}
+        SELECT COUNT(*)
+        FROM category
+        WHERE slug = #{slug}
     </select>
 
     <!-- 被文章引用的数量（含草稿与软删，只要引用就拒绝删除） -->
     <select id="countArticlesUsing" resultType="long">
-        SELECT COUNT(*) FROM article WHERE category_id = #{categoryId} AND deleted = false
+        SELECT COUNT(*)
+        FROM article
+        WHERE category_id = #{categoryId}
+          AND deleted = false
     </select>
 
     <!-- 全部分类 + 已发布文章数（管理端与公开接口共用） -->
     <select id="listWithPublishedCount" resultType="com.forever.server.category.CategoryMapper$CategoryCountRow">
-        SELECT c.id, c.name, c.slug, c.sort,
+        SELECT c.id,
+               c.name,
+               c.slug,
+               c.sort,
                COUNT(a.id) AS article_count
         FROM category c
-        LEFT JOIN article a
-               ON a.category_id = c.id AND a.status = 'PUBLISHED' AND a.deleted = false
+                 LEFT JOIN article a
+                           ON a.category_id = c.id AND a.status = 'PUBLISHED' AND a.deleted = false
         GROUP BY c.id
         ORDER BY c.sort, c.id
     </select>

@@ -5,11 +5,8 @@ import com.forever.server.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -19,13 +16,10 @@ import java.util.List;
 @Tag(name = "推送管理", description = "Web Push 订阅管理与测试发送，需 JWT 认证")
 @RestController
 @RequestMapping("/api/admin/push")
+@RequiredArgsConstructor
 public class AdminPushController {
 
     private final PushService service;
-
-    public AdminPushController(PushService service) {
-        this.service = service;
-    }
 
     @Perm("push:list")
     @Operation(summary = "订阅列表", description = "全量返回，endpoint 脱敏只留尾段，附归属用户与推送/送达时间")

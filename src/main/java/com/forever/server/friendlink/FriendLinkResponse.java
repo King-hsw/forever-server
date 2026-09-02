@@ -17,14 +17,18 @@ public record FriendLinkResponse(
         @Schema(description = "申请者联系方式，仅管理端可见") String contact,
         @Schema(description = "驳回原因，仅管理端可见") String rejectReason) {
 
-    /** 公开视图：隐藏联系方式与驳回原因 */
+    /**
+     * 公开视图：隐藏联系方式与驳回原因
+     */
     public static FriendLinkResponse publicView(FriendLink link) {
         return new FriendLinkResponse(link.getId(), link.getName(), link.getSiteUrl(),
                 link.getIconUrl(), link.getDescription(), link.getStatus(),
                 link.getCreatedAt(), link.getReviewedAt(), null, null);
     }
 
-    /** 管理视图：包含全部字段 */
+    /**
+     * 管理视图：包含全部字段
+     */
     public static FriendLinkResponse adminView(FriendLink link) {
         return new FriendLinkResponse(link.getId(), link.getName(), link.getSiteUrl(),
                 link.getIconUrl(), link.getDescription(), link.getStatus(),

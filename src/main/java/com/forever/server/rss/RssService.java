@@ -4,6 +4,7 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,19 +15,12 @@ import java.util.Map;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RssService {
 
     private final RssFeedMapper feedMapper;
     private final RssItemMapper itemMapper;
     private final RssFetchService fetchService;
-
-    public RssService(RssFeedMapper feedMapper,
-                      RssItemMapper itemMapper,
-                      RssFetchService fetchService) {
-        this.feedMapper = feedMapper;
-        this.itemMapper = itemMapper;
-        this.fetchService = fetchService;
-    }
 
     // ---------- 管理端 ----------
 
@@ -43,7 +37,9 @@ public class RssService {
         return feedMapper.findAll().stream().map(f -> toResponse(f, counts)).toList();
     }
 
-    /** 公开端订阅源列表：仅启用中的源 */
+    /**
+     * 公开端订阅源列表：仅启用中的源
+     */
     public List<RssFeedResponse> listEnabledFeeds() {
         return feedMapper.findEnabled().stream()
                 .map(f -> toResponse(f, Map.of()))
@@ -83,7 +79,9 @@ public class RssService {
         return toResponse(exists, countByFeed());
     }
 
-    /** 手动触发单个源的抓取 */
+    /**
+     * 手动触发单个源的抓取
+     */
     public void refresh(Long id) {
         RssFeed feed = requireExists(id);
         fetchService.fetchOne(feed);

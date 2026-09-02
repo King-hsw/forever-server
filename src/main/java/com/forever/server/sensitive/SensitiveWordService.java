@@ -16,7 +16,9 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class SensitiveWordService {
 
-    /** 单条缓存快照：不可变列表，读多写少场景无锁安全 */
+    /**
+     * 单条缓存快照：不可变列表，读多写少场景无锁安全
+     */
     private final AtomicReference<List<SensitiveWord>> cache =
             new AtomicReference<>(List.of());
 
@@ -64,7 +66,9 @@ public class SensitiveWordService {
         log.info("sensitive word deleted: id={}", id);
     }
 
-    /** 评论内容打码：命中词替换为对应 replacement */
+    /**
+     * 评论内容打码：命中词替换为对应 replacement
+     */
     public String mask(String content) {
         String result = content;
         for (SensitiveWord w : cache.get()) {

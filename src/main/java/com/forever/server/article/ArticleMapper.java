@@ -52,9 +52,13 @@ public interface ArticleMapper {
 
     int softDelete(Long id);
 
-    /** 仅更新概要（AI 生成） */
+    /**
+     * 仅更新概要（AI 生成）
+     */
     void updateSummary(@Param("id") Long id, @Param("summary") String summary);
 
-    /** 批量取多篇文章的标签（联表），service 组装回各文章 */
+    /**
+     * 批量取多篇文章的标签（联表），service 组装回各文章
+     */
     List<Article.TagItemRow> tagRowsForArticles(@Param("articleIds") List<Long> articleIds);
 }

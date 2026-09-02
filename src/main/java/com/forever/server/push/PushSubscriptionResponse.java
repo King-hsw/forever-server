@@ -4,7 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.time.LocalDateTime;
 
-/** 管理端订阅列表项：endpoint 脱敏只留尾段（完整 endpoint 含 token，无展示必要） */
+/**
+ * 管理端订阅列表项：endpoint 脱敏只留尾段（完整 endpoint 含 token，无展示必要）
+ */
 @Schema(description = "推送订阅列表项")
 public record PushSubscriptionResponse(
         @Schema(description = "订阅地址尾段（脱敏）", example = "…4dYXA2lx0ZQyAiA")

@@ -6,7 +6,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** 推送订阅请求：前端 pushManager.subscribe 结果的 JSON + 可选归属邮箱（游客评论成功后上报） */
+/**
+ * 推送订阅请求：前端 pushManager.subscribe 结果的 JSON + 可选归属邮箱（游客评论成功后上报）
+ */
 @Schema(description = "Web Push 订阅请求")
 public record PushSubscribeRequest(
         @Schema(description = "推送服务分配的订阅地址", example = "https://fcm.googleapis.com/fcm/send/…")

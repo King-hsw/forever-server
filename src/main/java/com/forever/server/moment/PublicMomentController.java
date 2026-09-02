@@ -1,26 +1,22 @@
 package com.forever.server.moment;
 
 import com.forever.server.auth.AuthPrincipal;
+import com.forever.server.comment.CommentAdminResponse;
+import com.forever.server.comment.CommentCreateRequest;
+import com.forever.server.comment.CommentResponse;
 import com.forever.server.comment.CommentService;
 import com.forever.server.common.ApiResponse;
 import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Web;
-import com.forever.server.comment.CommentCreateRequest;
-import com.forever.server.comment.CommentResponse;
-import com.forever.server.comment.CommentAdminResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Optional;
 
@@ -30,15 +26,11 @@ import java.util.Optional;
  */
 @Tag(name = "动态·公开接口", description = "访客查看动态与评论，无需登录")
 @RestController
+@RequiredArgsConstructor
 public class PublicMomentController {
 
     private final MomentService momentService;
     private final CommentService commentService;
-
-    public PublicMomentController(MomentService momentService, CommentService commentService) {
-        this.momentService = momentService;
-        this.commentService = commentService;
-    }
 
     @Operation(summary = "分页查看动态", description = "created_at 倒序；user 可选，只查该用户的动态；canDelete 按当前登录态计算")
     @GetMapping("/api/v1/moments")
@@ -80,7 +72,9 @@ public class PublicMomentController {
         return ApiResponse.ok(commentService.createMoment(id, viewerUid(authentication), request, Web.clientIp(httpRequest)));
     }
 
-    /** 公开接口不强制登录：带有效 Bearer 返回其 uid，匿名 / 无效凭证返回空 */
+    /**
+     * 公开接口不强制登录：带有效 Bearer 返回其 uid，匿名 / 无效凭证返回空
+     */
     private static Long viewerUid(Authentication authentication) {
         return Optional.ofNullable(authentication)
                 .map(Authentication::getPrincipal)

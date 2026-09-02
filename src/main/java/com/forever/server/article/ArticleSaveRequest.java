@@ -6,7 +6,9 @@ import jakarta.validation.constraints.Size;
 
 import java.util.List;
 
-/** 文章创建/更新请求（更新时全量提交） */
+/**
+ * 文章创建/更新请求（更新时全量提交）
+ */
 @Schema(description = "文章创建/更新请求（更新时全量提交，未传的字段会被置空）")
 public record ArticleSaveRequest(
         @Schema(description = "标题", example = "Spring Boot 4 新特性概览")

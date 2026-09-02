@@ -3,6 +3,7 @@ package com.forever.server.auth;
 import com.forever.server.actionlog.ActionLogService;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -14,24 +15,17 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AuthService {
 
     private final SysUserMapper sysUserMapper;
     private final PasswordEncoder passwordEncoder;
     private final TokenService tokenService;
     private final ActionLogService actionLogService;
-    /** 登录接口路径，审计日志用 */
+    /**
+     * 登录接口路径，审计日志用
+     */
     private static final String LOGIN_PATH = "/api/auth/login";
-
-    public AuthService(SysUserMapper sysUserMapper,
-                       PasswordEncoder passwordEncoder,
-                       TokenService tokenService,
-                       ActionLogService actionLogService) {
-        this.sysUserMapper = sysUserMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.tokenService = tokenService;
-        this.actionLogService = actionLogService;
-    }
 
     public LoginResponse login(LoginRequest request, String ip) {
         SysUser user = sysUserMapper.findByUsername(request.username());

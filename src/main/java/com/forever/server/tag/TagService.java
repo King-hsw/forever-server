@@ -2,6 +2,7 @@ package com.forever.server.tag;
 
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -13,13 +14,10 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class TagService {
 
     private final TagMapper tagMapper;
-
-    public TagService(TagMapper tagMapper) {
-        this.tagMapper = tagMapper;
-    }
 
     public List<TagResponse> listAll() {
         return tagMapper.listWithPublishedCount().stream()

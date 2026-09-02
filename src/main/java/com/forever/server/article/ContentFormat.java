@@ -5,8 +5,12 @@ package com.forever.server.article;
  * 未来新增 MDX / RICH_TEXT 等格式时 Core 无需改动。
  */
 public enum ContentFormat {
-    /** Markdown 原文（当前默认） */
+    /**
+     * Markdown 原文（当前默认）
+     */
     MARKDOWN,
-    /** 富文本 / HTML */
+    /**
+     * 富文本 / HTML
+     */
     HTML
 }

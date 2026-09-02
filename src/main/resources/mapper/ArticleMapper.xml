@@ -25,8 +25,8 @@
     <!-- 管理端分页：状态 / 关键词（标题 ILIKE）/ 分类筛选 -->
     <select id="adminPage" resultMap="articleMap">
         SELECT a.id, a.title, a.slug, a.summary, a.cover_image,
-               a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
-               a.published_at, a.created_at, a.updated_at, a.deleted
+        a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
+        a.published_at, a.created_at, a.updated_at, a.deleted
         FROM article a
         LEFT JOIN category c ON c.id = a.category_id
         <where>
@@ -52,8 +52,8 @@
     <!-- 公开分页：仅已发布的 ARTICLE 类型（PAGE 不进时间线）；支持分类 / 标签 / 关键词筛选 -->
     <select id="publicPage" resultMap="articleMap">
         SELECT DISTINCT a.id, a.title, a.slug, a.summary, a.cover_image,
-               a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
-               a.published_at, a.created_at, a.updated_at, a.deleted
+        a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
+        a.published_at, a.created_at, a.updated_at, a.deleted
         FROM article a
         LEFT JOIN category c ON c.id = a.category_id
         <if test="tagId != null">
@@ -65,7 +65,8 @@
             AND a.type = 'ARTICLE'
             <if test="categoryId != null">AND a.category_id = #{categoryId}</if>
             <if test="keyword != null and keyword != ''">AND (a.title ILIKE '%' || #{keyword} || '%'
-                OR a.summary ILIKE '%' || #{keyword} || '%')</if>
+                OR a.summary ILIKE '%' || #{keyword} || '%')
+            </if>
         </where>
         ORDER BY a.published_at DESC
         LIMIT #{size} OFFSET #{offset}
@@ -82,7 +83,8 @@
             AND a.type = 'ARTICLE'
             <if test="categoryId != null">AND a.category_id = #{categoryId}</if>
             <if test="keyword != null and keyword != ''">AND (a.title ILIKE '%' || #{keyword} || '%'
-                OR a.summary ILIKE '%' || #{keyword} || '%')</if>
+                OR a.summary ILIKE '%' || #{keyword} || '%')
+            </if>
         </where>
     </select>
 
@@ -100,65 +102,121 @@
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO article (title, slug, summary, content, cover_image, category_id, status, type, content_format)
-        VALUES (#{title}, #{slug}, #{summary}, #{content}, #{coverImage}, #{categoryId}, #{status}, #{type}, #{contentFormat})
+        VALUES (#{title}, #{slug}, #{summary}, #{content}, #{coverImage}, #{categoryId}, #{status}, #{type},
+                #{contentFormat})
     </insert>
 
     <update id="update">
         UPDATE article
-        SET title = #{title}, slug = #{slug}, summary = #{summary}, content = #{content},
-            cover_image = #{coverImage}, category_id = #{categoryId},
-            type = #{type}, content_format = #{contentFormat}, updated_at = CURRENT_TIMESTAMP
-        WHERE id = #{id} AND deleted = false
+        SET title          = #{title},
+            slug           = #{slug},
+            summary        = #{summary},
+            content        = #{content},
+            cover_image    = #{coverImage},
+            category_id    = #{categoryId},
+            type           = #{type},
+            content_format = #{contentFormat},
+            updated_at     = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND deleted = false
     </update>
 
     <select id="findById" resultMap="articleMap">
-        SELECT a.id, a.title, a.slug, a.summary, a.content, a.cover_image,
-               a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
-               a.published_at, a.created_at, a.updated_at, a.deleted
-        FROM article a LEFT JOIN category c ON c.id = a.category_id
-        WHERE a.id = #{id} AND a.deleted = false
+        SELECT a.id,
+               a.title,
+               a.slug,
+               a.summary,
+               a.content,
+               a.cover_image,
+               a.category_id,
+               c.name AS category_name,
+               a.status,
+               a.type,
+               a.content_format,
+               a.view_count,
+               a.published_at,
+               a.created_at,
+               a.updated_at,
+               a.deleted
+        FROM article a
+                 LEFT JOIN category c ON c.id = a.category_id
+        WHERE a.id = #{id}
+          AND a.deleted = false
     </select>
 
     <select id="findBySlug" resultMap="articleMap">
-        SELECT a.id, a.title, a.slug, a.summary, a.content, a.cover_image,
-               a.category_id, c.name AS category_name, a.status, a.type, a.content_format, a.view_count,
-               a.published_at, a.created_at, a.updated_at, a.deleted
-        FROM article a LEFT JOIN category c ON c.id = a.category_id
-        WHERE a.slug = #{slug} AND a.deleted = false
+        SELECT a.id,
+               a.title,
+               a.slug,
+               a.summary,
+               a.content,
+               a.cover_image,
+               a.category_id,
+               c.name AS category_name,
+               a.status,
+               a.type,
+               a.content_format,
+               a.view_count,
+               a.published_at,
+               a.created_at,
+               a.updated_at,
+               a.deleted
+        FROM article a
+                 LEFT JOIN category c ON c.id = a.category_id
+        WHERE a.slug = #{slug}
+          AND a.deleted = false
     </select>
 
     <select id="existsBySlug" resultType="long">
-        SELECT COUNT(*) FROM article WHERE slug = #{slug} AND deleted = false
+        SELECT COUNT(*)
+        FROM article
+        WHERE slug = #{slug}
+          AND deleted = false
     </select>
 
     <!-- 公开归档：仅已发布，不取重字段 -->
     <select id="selectArchive" resultType="com.forever.server.article.Article">
-        SELECT id, title, slug, published_at FROM article
-        WHERE status = 'PUBLISHED' AND deleted = false ORDER BY published_at DESC
+        SELECT id, title, slug, published_at
+        FROM article
+        WHERE status = 'PUBLISHED'
+          AND deleted = false
+        ORDER BY published_at DESC
     </select>
 
     <update id="publish">
         UPDATE article
-        SET status = 'PUBLISHED',
+        SET status       = 'PUBLISHED',
             published_at = COALESCE(published_at, CURRENT_TIMESTAMP),
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = #{id} AND deleted = false
+            updated_at   = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND deleted = false
     </update>
 
     <update id="unpublish">
-        UPDATE article SET status = 'DRAFT', updated_at = CURRENT_TIMESTAMP WHERE id = #{id} AND deleted = false
+        UPDATE article
+        SET status     = 'DRAFT',
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+          AND deleted = false
     </update>
 
     <update id="incrementViewCount">
-        UPDATE article SET view_count = view_count + 1 WHERE id = #{id}
+        UPDATE article
+        SET view_count = view_count + 1
+        WHERE id = #{id}
     </update>
 
     <update id="softDelete">
-        UPDATE article SET deleted = true, updated_at = CURRENT_TIMESTAMP WHERE id = #{id}
+        UPDATE article
+        SET deleted    = true,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE id = #{id}
     </update>
 
     <!-- 仅更新概要（AI 生成），不动 updated_at：正文未变，仅补充元信息 -->
     <update id="updateSummary">
-        UPDATE article SET summary = #{summary} WHERE id = #{id}
+        UPDATE article
+        SET summary = #{summary}
+        WHERE id = #{id}
     </update>
 </mapper>

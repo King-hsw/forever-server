@@ -3,7 +3,9 @@ package com.forever.server.auth;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
-/** 登录请求体 */
+/**
+ * 登录请求体
+ */
 @Schema(description = "登录请求")
 public record LoginRequest(
         @Schema(description = "用户名", example = "admin")

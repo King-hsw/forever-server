@@ -6,6 +6,7 @@ import com.forever.server.setting.SiteConfigService;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.MailException;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -23,15 +24,14 @@ import java.util.Properties;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MailService {
 
     private final SiteConfigService siteConfig;
 
-    public MailService(SiteConfigService siteConfig) {
-        this.siteConfig = siteConfig;
-    }
-
-    /** SMTP 是否已配置（服务器地址非空） */
+    /**
+     * SMTP 是否已配置（服务器地址非空）
+     */
     public boolean configured() {
         return siteConfig.getString(SiteConfigService.MAIL_HOST, null) != null;
     }

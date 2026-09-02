@@ -1,6 +1,7 @@
 package com.forever.server.actionlog;
 
 import com.forever.server.common.PageResult;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -9,15 +10,14 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ActionLogService {
 
     private final ActionLogMapper actionLogMapper;
 
-    public ActionLogService(ActionLogMapper actionLogMapper) {
-        this.actionLogMapper = actionLogMapper;
-    }
-
-    /** 记录一条审计日志；失败静默，不抛出 */
+    /**
+     * 记录一条审计日志；失败静默，不抛出
+     */
     public void record(String username, String method, String path,
                        int status, String ip, Long durationMs) {
         try {

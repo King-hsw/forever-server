@@ -25,14 +25,18 @@ public class GlobalExceptionHandler {
                 .body(new ApiResponse<>(e.errorCode().code(), e.getMessage(), e.data()));
     }
 
-    /** 请求体 JSON 非法或字段类型不符（如 images 元素不是字符串）：统一 400 */
+    /**
+     * 请求体 JSON 非法或字段类型不符（如 images 元素不是字符串）：统一 400
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiResponse<Void>> handleNotReadable(HttpMessageNotReadableException e) {
         log.warn("request body not readable: {}", e.getMessage());
         return ResponseEntity.badRequest().body(ApiResponse.error(ErrorCode.BAD_REQUEST, "请求体格式不正确"));
     }
 
-    /** Bean Validation 校验失败：data 返回字段级错误明细 */
+    /**
+     * Bean Validation 校验失败：data 返回字段级错误明细
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiResponse<Map<String, String>>> handleValidation(MethodArgumentNotValidException e) {
         Map<String, String> fieldErrors = new HashMap<>();
@@ -43,7 +47,9 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.BAD_REQUEST, fieldErrors));
     }
 
-    /** 权限校验拒绝（PermInterceptor / Spring Security）：统一 403，不当作服务端错误 */
+    /**
+     * 权限校验拒绝（PermInterceptor / Spring Security）：统一 403，不当作服务端错误
+     */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiResponse<Void>> handleAuthorizationDenied(AccessDeniedException e) {
         log.warn("access denied: {}", e.getMessage());
@@ -51,7 +57,9 @@ public class GlobalExceptionHandler {
                 .body(ApiResponse.error(ErrorCode.FORBIDDEN));
     }
 
-    /** 兜底：记录详情日志，响应不泄露堆栈 */
+    /**
+     * 兜底：记录详情日志，响应不泄露堆栈
+     */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleUnknown(Exception e) {
         log.error("unhandled exception", e);

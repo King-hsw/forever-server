@@ -3,6 +3,7 @@ package com.forever.server.category;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.SlugGenerator;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -14,13 +15,10 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class CategoryService {
 
     private final CategoryMapper categoryMapper;
-
-    public CategoryService(CategoryMapper categoryMapper) {
-        this.categoryMapper = categoryMapper;
-    }
 
     public List<CategoryResponse> listAll() {
         return categoryMapper.listWithPublishedCount().stream()

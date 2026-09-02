@@ -1,5 +1,6 @@
 package com.forever.server.rss;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -9,13 +10,10 @@ import org.springframework.stereotype.Component;
  * 可用配置覆盖：blog.rss.initial-delay-ms / blog.rss.fetch-interval-ms。
  */
 @Component
+@RequiredArgsConstructor
 public class RssScheduler {
 
     private final RssFetchService fetchService;
-
-    public RssScheduler(RssFetchService fetchService) {
-        this.fetchService = fetchService;
-    }
 
     @Scheduled(
             initialDelayString = "${blog.rss.initial-delay-ms:60000}",

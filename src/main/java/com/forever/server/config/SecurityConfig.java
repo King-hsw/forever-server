@@ -45,7 +45,9 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
-    /** 登录态过滤器：从 Bearer 头解析双 Token 的 access 侧，权限按 RBAC 权限码授予 */
+    /**
+     * 登录态过滤器：从 Bearer 头解析双 Token 的 access 侧，权限按 RBAC 权限码授予
+     */
     @Bean
     public OncePerRequestFilter authTokenFilter(TokenService tokenService, RbacService rbacService) {
         return new OncePerRequestFilter() {

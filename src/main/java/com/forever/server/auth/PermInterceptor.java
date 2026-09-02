@@ -50,7 +50,9 @@ public class PermInterceptor implements HandlerInterceptor {
         throw new AccessDeniedException("no permission: " + code);
     }
 
-    /** 方法级 @Perm 优先，其次类级；均支持 CGLIB 代理类（按签名回溯用户类方法）。 */
+    /**
+     * 方法级 @Perm 优先，其次类级；均支持 CGLIB 代理类（按签名回溯用户类方法）。
+     */
     private static Perm resolve(Method method) {
         Perm perm = AnnotatedElementUtils.findMergedAnnotation(method, Perm.class);
         if (perm != null) {

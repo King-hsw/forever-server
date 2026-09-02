@@ -1,17 +1,21 @@
 package com.forever.server.common;
 
+import org.springframework.util.DigestUtils;
+
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 
-import org.springframework.util.DigestUtils;
-
-/** 字符串与 URL 校验工具 */
+/**
+ * 字符串与 URL 校验工具
+ */
 public final class Strings {
 
     private Strings() {
     }
 
-    /** 空白串归一为 null */
+    /**
+     * 空白串归一为 null
+     */
     public static String blankToNull(String s) {
         return s == null || s.isBlank() ? null : s.trim();
     }
@@ -20,13 +24,17 @@ public final class Strings {
         return s.length() <= max ? s : s.substring(0, max);
     }
 
-    /** 压平空白后截断（通知摘要用：看不完整内容，点击进页面） */
+    /**
+     * 压平空白后截断（通知摘要用：看不完整内容，点击进页面）
+     */
     public static String excerpt(String s, int max) {
         String flat = (s == null ? "" : s).replaceAll("\\s+", " ").trim();
         return flat.length() <= max ? flat : flat.substring(0, max) + "…";
     }
 
-    /** 校验并返回合法的 http(s) 地址 */
+    /**
+     * 校验并返回合法的 http(s) 地址
+     */
     public static String checkHttpUrl(String url, String label) {
         try {
             URI uri = URI.create(url.trim());
@@ -40,7 +48,9 @@ public final class Strings {
         return url.trim();
     }
 
-    /** 邮箱 → Gravatar 头像（Cravatar 国内镜像）；邮箱为空（登录用户未填资料邮箱）返回 null */
+    /**
+     * 邮箱 → Gravatar 头像（Cravatar 国内镜像）；邮箱为空（登录用户未填资料邮箱）返回 null
+     */
     public static String gravatarUrl(String email) {
         if (email == null || email.isBlank()) {
             return null;

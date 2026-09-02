@@ -3,12 +3,11 @@ package com.forever.server.auth;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.Strings;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -17,6 +16,7 @@ import java.util.Map;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ProfileService {
 
     static final long MAX_AVATAR_BYTES = 2L * 1024 * 1024;
@@ -30,11 +30,6 @@ public class ProfileService {
 
     private final SysUserMapper sysUserMapper;
     private final PasswordEncoder passwordEncoder;
-
-    public ProfileService(SysUserMapper sysUserMapper, PasswordEncoder passwordEncoder) {
-        this.sysUserMapper = sysUserMapper;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     public ProfileResponse profileOf(long uid) {
         return toResponse(requireUser(uid));
@@ -77,7 +72,9 @@ public class ProfileService {
         return user;
     }
 
-    /** 头像展示地址：历史自定义直链优先，否则按邮箱 hash 取 Gravatar */
+    /**
+     * 头像展示地址：历史自定义直链优先，否则按邮箱 hash 取 Gravatar
+     */
     static ProfileResponse toResponse(SysUser user) {
         String avatar = user.getAvatarUrl();
         if (avatar == null && user.getEmail() != null) {

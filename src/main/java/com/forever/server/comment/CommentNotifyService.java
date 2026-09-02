@@ -7,6 +7,7 @@ import com.forever.server.config.BlogProperties;
 import com.forever.server.mail.MailService;
 import com.forever.server.push.PushService;
 import com.forever.server.setting.SiteConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class CommentNotifyService {
 
     private final MailService mailService;
@@ -25,15 +27,6 @@ public class CommentNotifyService {
     private final PushService pushService;
     private final SysUserMapper sysUserMapper;
     private final BlogProperties blogProperties;
-
-    public CommentNotifyService(MailService mailService, SiteConfigService siteConfig,
-                                PushService pushService, SysUserMapper sysUserMapper, BlogProperties blogProperties) {
-        this.mailService = mailService;
-        this.siteConfig = siteConfig;
-        this.pushService = pushService;
-        this.sysUserMapper = sysUserMapper;
-        this.blogProperties = blogProperties;
-    }
 
     /**
      * 评论落库后的通知（邮件 + Web Push）：
@@ -60,12 +53,12 @@ public class CommentNotifyService {
                         articleTitle, comment.getNickname(), Strings.excerpt(comment.getContent(), 80));
                 send(ownerEmail(), "博客有新的评论",
                         """
-                        《%s》收到新评论：
-
-                        昵称：%s
-                        内容：%s
-
-                        请登录后台查看与回复。""".formatted(articleTitle, comment.getNickname(), comment.getContent()));
+                                《%s》收到新评论：
+                                
+                                昵称：%s
+                                内容：%s
+                                
+                                请登录后台查看与回复。""".formatted(articleTitle, comment.getNickname(), comment.getContent()));
                 Long ownerUid = ownerUid();
                 if (ownerUid != null) {
                     pushService.sendToUser(ownerUid, "博客有新的评论", summary, sourceUrl);
@@ -76,7 +69,9 @@ public class CommentNotifyService {
         }
     }
 
-    /** 站长账号 uid（按启动配置的管理员用户名查）；配置缺失或账号不存在返回 null，推送自然跳过 */
+    /**
+     * 站长账号 uid（按启动配置的管理员用户名查）；配置缺失或账号不存在返回 null，推送自然跳过
+     */
     private Long ownerUid() {
         if (blogProperties.admin() == null || blogProperties.admin().username() == null) {
             return null;
@@ -96,11 +91,11 @@ public class CommentNotifyService {
     private String buildReplyBody(Comment parent, Comment reply, String articleTitle) {
         return """
                 你在《%s》下的评论：
-
+                
                   %s
-
+                
                 收到了 %s 的回复：
-
+                
                   %s""".formatted(articleTitle, parent.getContent(), reply.getNickname(), reply.getContent());
     }
 

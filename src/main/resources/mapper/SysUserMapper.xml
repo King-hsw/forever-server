@@ -4,11 +4,15 @@
 <mapper namespace="com.forever.server.auth.SysUserMapper">
 
     <select id="findByUsername" resultType="com.forever.server.auth.SysUser">
-        SELECT * FROM sys_user WHERE username = #{username}
+        SELECT *
+        FROM sys_user
+        WHERE username = #{username}
     </select>
 
     <select id="findById" resultType="com.forever.server.auth.SysUser">
-        SELECT * FROM sys_user WHERE id = #{id}
+        SELECT *
+        FROM sys_user
+        WHERE id = #{id}
     </select>
 
     <select id="findByIds" resultType="com.forever.server.auth.SysUser">
@@ -17,7 +21,8 @@
     </select>
 
     <select id="countAll" resultType="long">
-        SELECT COUNT(*) FROM sys_user
+        SELECT COUNT(*)
+        FROM sys_user
     </select>
 
     <insert id="insert" useGeneratedKeys="true" keyProperty="id">
@@ -26,22 +31,34 @@
     </insert>
 
     <select id="listAll" resultType="com.forever.server.auth.SysUser">
-        SELECT * FROM sys_user ORDER BY id
+        SELECT *
+        FROM sys_user
+        ORDER BY id
     </select>
 
     <update id="updateStatus">
-        UPDATE sys_user SET status = #{status} WHERE id = #{id}
+        UPDATE sys_user
+        SET status = #{status}
+        WHERE id = #{id}
     </update>
 
     <update id="updatePassword">
-        UPDATE sys_user SET password = #{password} WHERE id = #{id}
+        UPDATE sys_user
+        SET password = #{password}
+        WHERE id = #{id}
     </update>
 
     <update id="updateProfile">
-        UPDATE sys_user SET nickname = #{nickname}, email = #{email}, site = #{site} WHERE id = #{id}
+        UPDATE sys_user
+        SET nickname = #{nickname},
+            email    = #{email},
+            site     = #{site}
+        WHERE id = #{id}
     </update>
 
     <update id="updateAvatarUrl">
-        UPDATE sys_user SET avatar_url = #{avatarUrl} WHERE id = #{id}
+        UPDATE sys_user
+        SET avatar_url = #{avatarUrl}
+        WHERE id = #{id}
     </update>
 </mapper>

@@ -4,7 +4,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** 敏感词：命中后按 replacement 打码 */
+/**
+ * 敏感词：命中后按 replacement 打码
+ */
 @Data
 public class SensitiveWord {
 

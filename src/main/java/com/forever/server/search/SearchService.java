@@ -4,6 +4,7 @@ import com.forever.server.article.Article;
 import com.forever.server.article.ArticleMapper;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.util.HtmlUtils;
@@ -18,19 +19,17 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class SearchService {
 
     private static final int MAX_KEYWORD_LENGTH = 100;
-    /** 命中位置前后各保留的上下文字符数 */
+    /**
+     * 命中位置前后各保留的上下文字符数
+     */
     private static final int EXCERPT_CONTEXT = 60;
     private static final int EXCERPT_MAX_LENGTH = 120;
     private final SearchMapper searchMapper;
     private final ArticleMapper articleMapper;
-
-    public SearchService(SearchMapper searchMapper, ArticleMapper articleMapper) {
-        this.searchMapper = searchMapper;
-        this.articleMapper = articleMapper;
-    }
 
     /**
      * 全局搜索已发布文章。keyword 为空/全空白返回空页；超长截断。
@@ -91,7 +90,9 @@ public class SearchService {
         return new SearchItemResponse.Highlights(highlight(row.title(), kw), excerpt);
     }
 
-    /** text 中第一处 kw（忽略大小写）包上 <em>；未命中原样转义返回 */
+    /**
+     * text 中第一处 kw（忽略大小写）包上 <em>；未命中原样转义返回
+     */
     private static String highlight(String text, String kw) {
         if (text == null) {
             return null;
@@ -105,7 +106,9 @@ public class SearchService {
                 + HtmlUtils.htmlEscape(text.substring(idx + kw.length()));
     }
 
-    /** 命中位置前后各留 EXCERPT_CONTEXT 字符的上下文片段，越界侧加省略号 */
+    /**
+     * 命中位置前后各留 EXCERPT_CONTEXT 字符的上下文片段，越界侧加省略号
+     */
     private static String window(String text, String kw, int idx) {
         int start = Math.max(0, idx - EXCERPT_CONTEXT);
         int end = Math.min(text.length(), idx + kw.length() + EXCERPT_CONTEXT);

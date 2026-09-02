@@ -3,6 +3,7 @@ package com.forever.server.friendlink;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.Strings;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,22 +17,23 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class FriendLinkService {
 
     private final FriendLinkMapper mapper;
 
-    public FriendLinkService(FriendLinkMapper mapper) {
-        this.mapper = mapper;
-    }
-
     // ---------- 公开端 ----------
 
-    /** 前台展示：仅审核通过的友链 */
+    /**
+     * 前台展示：仅审核通过的友链
+     */
     public List<FriendLinkResponse> listApproved() {
         return mapper.findApproved().stream().map(FriendLinkResponse::publicView).toList();
     }
 
-    /** 访客提交友链申请 */
+    /**
+     * 访客提交友链申请
+     */
     @Transactional
     public FriendLinkResponse apply(FriendLinkApplyRequest request) {
         String siteUrl = Strings.checkHttpUrl(request.siteUrl(), "站点地址");
@@ -57,12 +59,16 @@ public class FriendLinkService {
 
     // ---------- 管理端 ----------
 
-    /** 全量列表（含待审核与已驳回） */
+    /**
+     * 全量列表（含待审核与已驳回）
+     */
     public List<FriendLinkResponse> listAll() {
         return mapper.findAll().stream().map(FriendLinkResponse::adminView).toList();
     }
 
-    /** 管理端主动创建友链：无需审核，创建即通过 */
+    /**
+     * 管理端主动创建友链：无需审核，创建即通过
+     */
     @Transactional
     public FriendLinkResponse create(FriendLinkApplyRequest request) {
         String siteUrl = Strings.checkHttpUrl(request.siteUrl(), "站点地址");
@@ -143,7 +149,9 @@ public class FriendLinkService {
         return link;
     }
 
-    /** 去掉末尾斜杠，避免同一站点因结尾差异重复申请 */
+    /**
+     * 去掉末尾斜杠，避免同一站点因结尾差异重复申请
+     */
     private static String normalize(String url) {
         String trimmed = url.trim();
         return trimmed.endsWith("/") && trimmed.length() > 1

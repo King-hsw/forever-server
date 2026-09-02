@@ -3,6 +3,7 @@ package com.forever.server.auth;
 import com.forever.server.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -18,16 +19,13 @@ import java.util.List;
 @Tag(name = "登录用户信息", description = "当前登录用户的身份、角色与权限")
 @RestController
 @RequestMapping("/api/admin")
+@RequiredArgsConstructor
 public class MeController {
 
     public record MeResponse(long uid, String username, List<String> roles, List<String> permissions) {
     }
 
     private final RbacService rbacService;
-
-    public MeController(RbacService rbacService) {
-        this.rbacService = rbacService;
-    }
 
     @Operation(summary = "获取当前登录用户信息", description = "uid/用户名来自登录令牌；roles/permissions 实时查库（带缓存）")
     @GetMapping("/me")

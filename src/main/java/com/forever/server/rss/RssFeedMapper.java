@@ -23,7 +23,9 @@ public interface RssFeedMapper {
 
     long countByFeedUrl(String feedUrl);
 
-    /** 抓取成功：回填标题/描述、刷新时间、清空错误 */
+    /**
+     * 抓取成功：回填标题/描述、刷新时间、清空错误
+     */
     void markSuccess(@Param("id") Long id,
                      @Param("fallbackTitle") String fallbackTitle,
                      @Param("description") String description,

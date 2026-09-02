@@ -5,7 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-/** 友链全量更新请求（管理端） */
+/**
+ * 友链全量更新请求（管理端）
+ */
 @Schema(description = "友链更新请求（全量提交）")
 public record FriendLinkUpdateRequest(
         @Schema(description = "站点名称")

@@ -2,7 +2,9 @@ package com.forever.server.push;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** 广播发送结果统计 */
+/**
+ * 广播发送结果统计
+ */
 @Schema(description = "推送发送结果")
 public record PushSendResult(
         @Schema(description = "本次尝试的订阅总数") long total,

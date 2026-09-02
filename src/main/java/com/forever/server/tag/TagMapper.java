@@ -19,7 +19,9 @@ public interface TagMapper {
 
     long countByName(String name);
 
-    /** 全部标签 + 已发布文章数 */
+    /**
+     * 全部标签 + 已发布文章数
+     */
     List<TagCountRow> listWithPublishedCount();
 
     record TagCountRow(Long id, String name, Long articleCount) {

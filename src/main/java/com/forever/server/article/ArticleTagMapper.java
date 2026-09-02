@@ -3,7 +3,9 @@ package com.forever.server.article;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
-/** 文章-标签关联 */
+/**
+ * 文章-标签关联
+ */
 @Mapper
 public interface ArticleTagMapper {
 

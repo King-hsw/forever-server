@@ -3,6 +3,7 @@ package com.forever.server.upload;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.storage.RustFsStorageService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -21,6 +22,7 @@ import java.util.regex.Pattern;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class UploadService {
 
     /**
@@ -61,10 +63,6 @@ public class UploadService {
             "仅支持 jpg / png / webp / gif 图片、mp3 / m4a / wav 音频、mp4 / webm / mkv 视频";
 
     private final RustFsStorageService storage;
-
-    public UploadService(RustFsStorageService storage) {
-        this.storage = storage;
-    }
 
     // ---------- 秒传查询 ----------
 

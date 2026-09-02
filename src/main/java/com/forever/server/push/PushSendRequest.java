@@ -2,7 +2,9 @@ package com.forever.server.push;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** 发送推送请求：字段均可选，缺省用默认值；url 仅接受站内路径（/ 开头） */
+/**
+ * 发送推送请求：字段均可选，缺省用默认值；url 仅接受站内路径（/ 开头）
+ */
 @Schema(description = "发送推送请求")
 public record PushSendRequest(
         @Schema(description = "通知标题，缺省为站点名", example = "补陋阁")

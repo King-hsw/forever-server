@@ -19,7 +19,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "blog.push.vapid")
 public record PushVapidProperties(String publicKey, String privateKey, String subject) {
 
-    /** 是否已完整配置（三项齐备），未配置 = 推送功能关闭 */
+    /**
+     * 是否已完整配置（三项齐备），未配置 = 推送功能关闭
+     */
     public boolean isConfigured() {
         return publicKey != null && !publicKey.isBlank()
                 && privateKey != null && !privateKey.isBlank()

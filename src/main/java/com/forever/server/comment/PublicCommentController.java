@@ -9,22 +9,15 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "评论·公开接口", description = "访客查看与发表评论，无需登录")
 @RestController
+@RequiredArgsConstructor
 public class PublicCommentController {
 
     private final CommentService commentService;
-
-    public PublicCommentController(CommentService commentService) {
-        this.commentService = commentService;
-    }
 
     @Operation(summary = "分页查看文章评论", description = "两层楼结构：根评论按时间倒序，楼内回复正序；仅返回已过审评论")
     @GetMapping("/api/v1/articles/{articleId}/comments")

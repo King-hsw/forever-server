@@ -4,7 +4,9 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/** sys_site_config 单行记录 */
+/**
+ * sys_site_config 单行记录
+ */
 @Data
 public class SiteConfig {
 

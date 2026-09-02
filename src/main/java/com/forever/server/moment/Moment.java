@@ -12,10 +12,14 @@ import java.time.LocalDateTime;
 public class Moment {
 
     private Long id;
-    /** sys_user.id */
+    /**
+     * sys_user.id
+     */
     private Long uid;
     private String content;
-    /** JSON：{"images":["url",...],"audio":url|null,"video":url|null} */
+    /**
+     * JSON：{"images":["url",...],"audio":url|null,"video":url|null}
+     */
     private String media;
     private String location;
     private BigDecimal lat;

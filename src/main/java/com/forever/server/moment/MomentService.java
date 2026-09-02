@@ -12,10 +12,11 @@ import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
 import com.forever.server.setting.SiteConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -23,7 +24,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,6 +38,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MomentService {
 
     static final int MAX_IMAGES = 9;
@@ -52,20 +53,10 @@ public class MomentService {
     private final CommentMapper commentMapper;
     private final RbacService rbacService;
     private final SiteConfigService siteConfig;
-    /** 仅用于 media JSON 存取；Spring Boot 4 自动装配的是 Jackson 3，这里用 classpath 自带的 Jackson 2 */
+    /**
+     * 仅用于 media JSON 存取；Spring Boot 4 自动装配的是 Jackson 3，这里用 classpath 自带的 Jackson 2
+     */
     private final ObjectMapper objectMapper = new ObjectMapper();
-
-    public MomentService(MomentMapper momentMapper,
-                         SysUserMapper sysUserMapper,
-                         CommentMapper commentMapper,
-                         RbacService rbacService,
-                         SiteConfigService siteConfig) {
-        this.momentMapper = momentMapper;
-        this.sysUserMapper = sysUserMapper;
-        this.commentMapper = commentMapper;
-        this.rbacService = rbacService;
-        this.siteConfig = siteConfig;
-    }
 
     // ---------- 公开端 ----------
 
@@ -108,12 +99,14 @@ public class MomentService {
 
     // ---------- 管理端 ----------
 
-    /** 发布动态：媒体引用为前端直传得到的 RustFS 直链，仅校验 http(s) 格式后入库 */
+    /**
+     * 发布动态：媒体引用为前端直传得到的 RustFS 直链，仅校验 http(s) 格式后入库
+     */
     public MomentResponse create(long uid, MomentCreateRequest request) {
         String content = Strings.blankToNull(request.content());
         List<String> images = request.images() == null ? List.of()
                 : request.images().stream().map(Strings::blankToNull).filter(u -> u != null)
-                        .map(ref -> Strings.checkHttpUrl(ref, "图片直链")).toList();
+                .map(ref -> Strings.checkHttpUrl(ref, "图片直链")).toList();
         String audio = Strings.blankToNull(request.audio());
         if (audio != null) {
             audio = Strings.checkHttpUrl(audio, "音频直链");
@@ -191,7 +184,9 @@ public class MomentService {
         }
     }
 
-    /** Amap 直辖市 city 为数组（如 ["北京市"]），普通城市为字符串 */
+    /**
+     * Amap 直辖市 city 为数组（如 ["北京市"]），普通城市为字符串
+     */
     private static String cityText(JsonNode city) {
         if (city.isTextual()) {
             return city.asText().trim();

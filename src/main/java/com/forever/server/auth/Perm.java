@@ -1,10 +1,6 @@
 package com.forever.server.auth;
 
-import java.lang.annotation.Documented;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import java.lang.annotation.*;
 
 /**
  * 端点级权限声明（/api/admin/** 下的接口必须声明）：方法级或类级。
@@ -21,12 +17,18 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 public @interface Perm {
-    /** 权限码（如 article:create），校验与授权共用；命名约定 module:action；留空 = 显式"仅需登录态" */
+    /**
+     * 权限码（如 article:create），校验与授权共用；命名约定 module:action；留空 = 显式"仅需登录态"
+     */
     String value() default "";
 
-    /** 显示名；留空自动取方法 @Operation summary，再空用权限码本身 */
+    /**
+     * 显示名；留空自动取方法 @Operation summary，再空用权限码本身
+     */
     String name() default "";
 
-    /** 模块分组；留空自动取类 @Tag name，再空用权限码冒号前段 */
+    /**
+     * 模块分组；留空自动取类 @Tag name，再空用权限码冒号前段
+     */
     String module() default "";
 }

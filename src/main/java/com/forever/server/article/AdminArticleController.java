@@ -8,28 +8,17 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "文章管理", description = "管理端文章接口，需 JWT 认证；URL 使用数字 id")
 @RestController
 @RequestMapping("/api/admin/articles")
+@RequiredArgsConstructor
 public class AdminArticleController {
 
     private final ArticleService articleService;
     private final AiSummaryService aiSummaryService;
-
-    public AdminArticleController(ArticleService articleService, AiSummaryService aiSummaryService) {
-        this.articleService = articleService;
-        this.aiSummaryService = aiSummaryService;
-    }
 
     @Perm("article:list")
     @Operation(summary = "分页查询文章", description = "管理端全量查询，含草稿；keyword 模糊匹配标题")

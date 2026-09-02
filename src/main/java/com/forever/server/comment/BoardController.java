@@ -10,11 +10,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 留言板。留言即 target_type=BOARD 的评论，
@@ -22,15 +19,11 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "留言板·公开接口", description = "访客查看与发表留言，无需登录")
 @RestController
+@RequiredArgsConstructor
 public class BoardController {
 
     private final CommentService commentService;
     private final SiteConfigService siteConfig;
-
-    public BoardController(CommentService commentService, SiteConfigService siteConfig) {
-        this.commentService = commentService;
-        this.siteConfig = siteConfig;
-    }
 
     public record BoardInfo(String title, String summary) {
     }

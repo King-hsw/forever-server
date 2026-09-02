@@ -6,6 +6,7 @@ import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,13 +17,10 @@ import java.util.List;
 @Tag(name = "RSS·公开接口", description = "前台展示接口：订阅的文章流与订阅源列表，无需认证")
 @RestController
 @RequestMapping("/api/v1/rss")
+@RequiredArgsConstructor
 public class PublicRssController {
 
     private final RssService rssService;
-
-    public PublicRssController(RssService rssService) {
-        this.rssService = rssService;
-    }
 
     @Operation(summary = "分页查询最新订阅文章", description = "按发布时间倒序，仅包含启用中的订阅源")
     @GetMapping("/items")

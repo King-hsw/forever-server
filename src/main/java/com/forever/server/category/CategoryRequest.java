@@ -4,7 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** 分类创建/更新请求 */
+/**
+ * 分类创建/更新请求
+ */
 @Schema(description = "分类创建/更新请求")
 public record CategoryRequest(
         @Schema(description = "分类名称", example = "技术分享")

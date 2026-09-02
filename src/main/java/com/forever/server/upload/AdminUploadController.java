@@ -5,6 +5,7 @@ import com.forever.server.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,18 +20,15 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "文件上传（通用）", description = "内容寻址直传（md5 秒传）/ 分片断点续传，公开桶直链读取")
 @RestController
 @RequestMapping("/api/admin/upload")
+@RequiredArgsConstructor
 public class AdminUploadController {
 
     private final UploadService uploadService;
 
-    public AdminUploadController(UploadService uploadService) {
-        this.uploadService = uploadService;
-    }
-
     @Perm("upload:upload")
     @Operation(summary = "秒传查询", description = """
-        上传前先调这里：公开桶中已有同内容（同 md5）对象则 exists=true 并直接返回直链，
-        前端跳过上传；不存在才继续调 presign / multipart:init 申请凭证。""")
+            上传前先调这里：公开桶中已有同内容（同 md5）对象则 exists=true 并直接返回直链，
+            前端跳过上传；不存在才继续调 presign / multipart:init 申请凭证。""")
     @PostMapping("/check")
     public ApiResponse<UploadDtos.CheckResponse> check(
             @Valid @RequestBody UploadDtos.CheckRequest request) {
@@ -39,8 +37,8 @@ public class AdminUploadController {
 
     @Perm("upload:upload")
     @Operation(summary = "申请单文件直传凭证", description = """
-        check 未命中后调用：返回限时 PUT 地址 uploadUrl 与直链 accessUrl。
-        前端以 PUT 携带 contentType 请求头直传文件体，成功后把 accessUrl 填入业务字段。""")
+            check 未命中后调用：返回限时 PUT 地址 uploadUrl 与直链 accessUrl。
+            前端以 PUT 携带 contentType 请求头直传文件体，成功后把 accessUrl 填入业务字段。""")
     @PostMapping("/presign")
     public ApiResponse<UploadDtos.PresignResponse> presign(
             @Valid @RequestBody UploadDtos.PresignRequest request) {

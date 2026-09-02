@@ -1,6 +1,7 @@
 package com.forever.server.auth;
 
 import com.forever.server.config.BlogProperties;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
  * 生产环境务必通过环境变量覆盖默认账密。
  */
 @Component
+@RequiredArgsConstructor
 public class AdminInitializer implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(AdminInitializer.class);
@@ -22,16 +24,6 @@ public class AdminInitializer implements ApplicationRunner {
     private final PasswordEncoder passwordEncoder;
     private final BlogProperties props;
     private final RbacMapper rbacMapper;
-
-    public AdminInitializer(SysUserMapper sysUserMapper,
-                            PasswordEncoder passwordEncoder,
-                            BlogProperties props,
-                            RbacMapper rbacMapper) {
-        this.sysUserMapper = sysUserMapper;
-        this.passwordEncoder = passwordEncoder;
-        this.props = props;
-        this.rbacMapper = rbacMapper;
-    }
 
     @Override
     public void run(ApplicationArguments args) {

@@ -11,13 +11,21 @@ import java.time.LocalDateTime;
 public class Message {
 
     private Long id;
-    /** 收件人 sys_user.id */
+    /**
+     * 收件人 sys_user.id
+     */
     private Long userId;
-    /** COMMENT_REPLY / NEW_COMMENT */
+    /**
+     * COMMENT_REPLY / NEW_COMMENT
+     */
     private String type;
-    /** 摘要文案 */
+    /**
+     * 摘要文案
+     */
     private String content;
-    /** 点击跳转链接（含锚点） */
+    /**
+     * 点击跳转链接（含锚点）
+     */
     private String sourceUrl;
     private Boolean isRead;
     private Boolean deleted;

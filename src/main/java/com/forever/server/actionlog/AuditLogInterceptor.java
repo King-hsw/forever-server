@@ -3,6 +3,7 @@ package com.forever.server.actionlog;
 import com.forever.server.common.Web;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -16,15 +17,12 @@ import org.springframework.web.servlet.HandlerInterceptor;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class AuditLogInterceptor implements HandlerInterceptor {
 
     private static final String ATTR_START = AuditLogInterceptor.class.getName() + ".start";
 
     private final ActionLogService actionLogService;
-
-    public AuditLogInterceptor(ActionLogService actionLogService) {
-        this.actionLogService = actionLogService;
-    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
@@ -59,7 +57,9 @@ public class AuditLogInterceptor implements HandlerInterceptor {
         };
     }
 
-    /** JWT 认证通过后 SecurityContext 中有操作人；匿名请求返回 anonymous */
+    /**
+     * JWT 认证通过后 SecurityContext 中有操作人；匿名请求返回 anonymous
+     */
     private static String currentUsername() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.isAuthenticated() ? auth.getName() : null;

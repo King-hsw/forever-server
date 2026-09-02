@@ -9,41 +9,58 @@
         INSERT INTO push_subscription (endpoint, p256dh, auth, user_id, email)
         VALUES (#{endpoint}, #{p256dh}, #{auth}, #{userId}, #{email})
         ON CONFLICT (endpoint) DO UPDATE
-        SET p256dh  = EXCLUDED.p256dh,
-            auth    = EXCLUDED.auth,
-            user_id = COALESCE(EXCLUDED.user_id, push_subscription.user_id),
-            email   = COALESCE(EXCLUDED.email, push_subscription.email)
+            SET p256dh  = EXCLUDED.p256dh,
+                auth    = EXCLUDED.auth,
+                user_id = COALESCE(EXCLUDED.user_id, push_subscription.user_id),
+                email   = COALESCE(EXCLUDED.email, push_subscription.email)
     </insert>
 
     <delete id="deleteByEndpoint">
-        DELETE FROM push_subscription WHERE endpoint = #{endpoint}
+        DELETE
+        FROM push_subscription
+        WHERE endpoint = #{endpoint}
     </delete>
 
     <select id="findAll" resultType="com.forever.server.push.PushSubscription">
-        SELECT * FROM push_subscription ORDER BY added_at DESC
+        SELECT *
+        FROM push_subscription
+        ORDER BY added_at DESC
     </select>
 
     <select id="findByUserId" resultType="com.forever.server.push.PushSubscription">
-        SELECT * FROM push_subscription WHERE user_id = #{userId} ORDER BY added_at DESC
+        SELECT *
+        FROM push_subscription
+        WHERE user_id = #{userId}
+        ORDER BY added_at DESC
     </select>
 
     <select id="findByEmail" resultType="com.forever.server.push.PushSubscription">
-        SELECT * FROM push_subscription WHERE lower(email) = lower(#{email}) ORDER BY added_at DESC
+        SELECT *
+        FROM push_subscription
+        WHERE lower(email) = lower(#{email})
+        ORDER BY added_at DESC
     </select>
 
     <select id="countDelivered" resultType="long">
-        SELECT COUNT(*) FROM push_subscription WHERE last_delivered_at IS NOT NULL
+        SELECT COUNT(*)
+        FROM push_subscription
+        WHERE last_delivered_at IS NOT NULL
     </select>
 
     <select id="maxDeliveredAt" resultType="java.time.LocalDateTime">
-        SELECT MAX(last_delivered_at) FROM push_subscription
+        SELECT MAX(last_delivered_at)
+        FROM push_subscription
     </select>
 
     <update id="markDelivered">
-        UPDATE push_subscription SET last_delivered_at = #{now} WHERE endpoint = #{endpoint}
+        UPDATE push_subscription
+        SET last_delivered_at = #{now}
+        WHERE endpoint = #{endpoint}
     </update>
 
     <update id="markSent">
-        UPDATE push_subscription SET last_sent_at = #{now} WHERE id = #{id}
+        UPDATE push_subscription
+        SET last_sent_at = #{now}
+        WHERE id = #{id}
     </update>
 </mapper>

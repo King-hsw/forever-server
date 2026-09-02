@@ -5,6 +5,7 @@ import com.rometools.rome.feed.synd.SyndEntry;
 import com.rometools.rome.feed.synd.SyndFeed;
 import com.rometools.rome.io.SyndFeedInput;
 import com.rometools.rome.io.XmlReader;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
@@ -24,6 +25,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RssFetchService {
 
     private static final int SUMMARY_MAX = 300;
@@ -37,12 +39,9 @@ public class RssFetchService {
     private final RssFeedMapper feedMapper;
     private final RssItemMapper itemMapper;
 
-    public RssFetchService(RssFeedMapper feedMapper, RssItemMapper itemMapper) {
-        this.feedMapper = feedMapper;
-        this.itemMapper = itemMapper;
-    }
-
-    /** 抓取所有启用的源（定时任务 / 手动全量刷新入口） */
+    /**
+     * 抓取所有启用的源（定时任务 / 手动全量刷新入口）
+     */
     public void fetchAll() {
         List<RssFeed> feeds = feedMapper.findEnabled();
         log.info("rss fetch start: {} enabled feed(s)", feeds.size());
@@ -93,7 +92,9 @@ public class RssFetchService {
         }
     }
 
-    /** 只保留每条 entry 的最新 MAX_ITEMS_PER_FETCH 条，历史旧文不回灌 */
+    /**
+     * 只保留每条 entry 的最新 MAX_ITEMS_PER_FETCH 条，历史旧文不回灌
+     */
     private int saveEntries(Long feedId, SyndFeed synd) {
         List<SyndEntry> entries = synd.getEntries();
         int inserted = 0;
@@ -118,7 +119,9 @@ public class RssFetchService {
         return inserted;
     }
 
-    /** 取描述文本并去掉内嵌 HTML 标签 */
+    /**
+     * 取描述文本并去掉内嵌 HTML 标签
+     */
     private String extractSummary(SyndEntry entry) {
         if (entry.getDescription() == null) {
             return null;

@@ -6,6 +6,7 @@ import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.SlugGenerator;
 import com.forever.server.setting.SiteConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class ArticleService {
 
     private final ArticleMapper articleMapper;
@@ -31,18 +33,6 @@ public class ArticleService {
     private final CategoryMapper categoryMapper;
     private final com.forever.server.tag.TagMapper tagMapper;
     private final SiteConfigService siteConfig;
-
-    public ArticleService(ArticleMapper articleMapper,
-                          ArticleTagMapper articleTagMapper,
-                          CategoryMapper categoryMapper,
-                          com.forever.server.tag.TagMapper tagMapper,
-                          SiteConfigService siteConfig) {
-        this.articleMapper = articleMapper;
-        this.articleTagMapper = articleTagMapper;
-        this.categoryMapper = categoryMapper;
-        this.tagMapper = tagMapper;
-        this.siteConfig = siteConfig;
-    }
 
     // ---------- 管理端 ----------
 
@@ -141,7 +131,9 @@ public class ArticleService {
         return toResponse(article);
     }
 
-    /** 文章归档：仅已发布，按发布时间倒序 */
+    /**
+     * 文章归档：仅已发布，按发布时间倒序
+     */
     public List<ArticleArchiveItem> listArchive() {
         return articleMapper.selectArchive().stream()
                 .map(a -> new ArticleArchiveItem(a.getId(), a.getTitle(), a.getSlug(), a.getPublishedAt()))
@@ -169,7 +161,9 @@ public class ArticleService {
         article.setContentFormat(firstNonNull(request.contentFormat(), article.getContentFormat(), ContentFormat.MARKDOWN));
     }
 
-    /** 请求值优先；否则保留实体已有值（更新场景）；都没有则用默认值（创建场景） */
+    /**
+     * 请求值优先；否则保留实体已有值（更新场景）；都没有则用默认值（创建场景）
+     */
     private static <T> T firstNonNull(T requested, T existing, T fallback) {
         if (requested != null) {
             return requested;
@@ -219,7 +213,9 @@ public class ArticleService {
         tagIds.stream().distinct().forEach(tagId -> articleTagMapper.insert(articleId, tagId));
     }
 
-    /** 批量组装标签，避免 N+1 查询 */
+    /**
+     * 批量组装标签，避免 N+1 查询
+     */
     private void attachTags(List<Article> articles) {
         if (articles.isEmpty()) {
             return;
@@ -247,7 +243,9 @@ public class ArticleService {
                 a.getContent() == null ? null : ArticleResponse.estimateReadingTime(a.getContent()));
     }
 
-    /** 前台完整 URL，供机器消费方直接使用；后台未配置站点地址时返回 null */
+    /**
+     * 前台完整 URL，供机器消费方直接使用；后台未配置站点地址时返回 null
+     */
     private String publicUrl(String slug) {
         String base = siteConfig.getString(SiteConfigService.SITE_URL, null);
         if (base == null || base.isBlank()) {

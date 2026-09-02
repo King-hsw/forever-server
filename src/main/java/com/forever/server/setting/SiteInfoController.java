@@ -3,6 +3,7 @@ package com.forever.server.setting;
 import com.forever.server.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -11,13 +12,10 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "站点·公开接口", description = "访客可读的站点信息，无需登录")
 @RestController
+@RequiredArgsConstructor
 public class SiteInfoController {
 
     private final SiteConfigService siteConfig;
-
-    public SiteInfoController(SiteConfigService siteConfig) {
-        this.siteConfig = siteConfig;
-    }
 
     public record SiteInfo(String birthDate) {
     }

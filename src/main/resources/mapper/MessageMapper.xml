@@ -9,27 +9,47 @@
     </insert>
 
     <select id="pageByUser" resultType="com.forever.server.message.Message">
-        SELECT * FROM message WHERE user_id = #{userId} AND deleted = false
-        ORDER BY id DESC LIMIT #{size} OFFSET #{offset}
+        SELECT *
+        FROM message
+        WHERE user_id = #{userId}
+          AND deleted = false
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
     </select>
 
     <select id="countByUser" resultType="long">
-        SELECT COUNT(*) FROM message WHERE user_id = #{userId} AND deleted = false
+        SELECT COUNT(*)
+        FROM message
+        WHERE user_id = #{userId}
+          AND deleted = false
     </select>
 
     <select id="countUnread" resultType="long">
-        SELECT COUNT(*) FROM message WHERE user_id = #{userId} AND deleted = false AND is_read = false
+        SELECT COUNT(*)
+        FROM message
+        WHERE user_id = #{userId}
+          AND deleted = false
+          AND is_read = false
     </select>
 
     <update id="markRead">
-        UPDATE message SET is_read = true WHERE id = #{id} AND user_id = #{userId}
+        UPDATE message
+        SET is_read = true
+        WHERE id = #{id}
+          AND user_id = #{userId}
     </update>
 
     <update id="markAllRead">
-        UPDATE message SET is_read = true WHERE user_id = #{userId} AND is_read = false
+        UPDATE message
+        SET is_read = true
+        WHERE user_id = #{userId}
+          AND is_read = false
     </update>
 
     <update id="softDelete">
-        UPDATE message SET deleted = true WHERE id = #{id} AND user_id = #{userId}
+        UPDATE message
+        SET deleted = true
+        WHERE id = #{id}
+          AND user_id = #{userId}
     </update>
 </mapper>

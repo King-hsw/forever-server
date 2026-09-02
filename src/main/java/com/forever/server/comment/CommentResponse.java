@@ -18,13 +18,17 @@ public record CommentResponse(
         @Schema(description = "所回复的楼内回复昵称（仅回复楼内回复时非 null）") String parentNickname,
         @Schema(description = "所回复的楼内回复内容，前端展示引用") String parentContent) {
 
-    /** 根评论（replies 待组装） */
+    /**
+     * 根评论（replies 待组装）
+     */
     static CommentResponse root(Comment c, String avatarUrl) {
         return new CommentResponse(c.getId(), null, c.getNickname(), avatarUrl, c.getSite(),
                 c.getContent(), c.getCreatedAt(), List.of(), null, null);
     }
 
-    /** 回复（无下级）；parentNickname/parentContent 为所回复的楼内回复，回复根评论时为 null */
+    /**
+     * 回复（无下级）；parentNickname/parentContent 为所回复的楼内回复，回复根评论时为 null
+     */
     static CommentResponse reply(Comment c, String avatarUrl, String parentNickname, String parentContent) {
         return new CommentResponse(c.getId(), c.getParentId(), c.getNickname(), avatarUrl, c.getSite(),
                 c.getContent(), c.getCreatedAt(), null, parentNickname, parentContent);

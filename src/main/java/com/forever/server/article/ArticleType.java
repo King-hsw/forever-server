@@ -6,8 +6,12 @@ package com.forever.server.article;
  * PAGE 不出现在公开文章列表中。
  */
 public enum ArticleType {
-    /** 普通文章（默认），按发布时间进入时间线 */
+    /**
+     * 普通文章（默认），按发布时间进入时间线
+     */
     ARTICLE,
-    /** 独立页面：关于我、友链等 */
+    /**
+     * 独立页面：关于我、友链等
+     */
     PAGE
 }

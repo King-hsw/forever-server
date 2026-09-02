@@ -9,7 +9,9 @@ import java.util.List;
 @Mapper
 public interface RssItemMapper {
 
-    /** link 相同的条目只保留第一条，返回插入行数（0 表示已存在） */
+    /**
+     * link 相同的条目只保留第一条，返回插入行数（0 表示已存在）
+     */
     int insertIgnore(RssItem item);
 
     /**

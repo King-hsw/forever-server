@@ -6,14 +6,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
@@ -24,13 +18,10 @@ import java.util.Map;
 @Tag(name = "用户与角色管理", description = "后台开号、启停用、分配角色；角色权限矩阵调配")
 @RestController
 @RequestMapping("/api/admin")
+@RequiredArgsConstructor
 public class AdminRbacController {
 
     private final RbacService rbacService;
-
-    public AdminRbacController(RbacService rbacService) {
-        this.rbacService = rbacService;
-    }
 
     // ---------- DTO ----------
 
@@ -60,7 +51,9 @@ public class AdminRbacController {
     public record RolePermissionsRequest(List<Long> permissionIds) {
     }
 
-    /** 用户视图：不回传密码 */
+    /**
+     * 用户视图：不回传密码
+     */
     public record UserView(Long id, String username, String nickname, String status,
                            List<SysRole> roles, java.time.LocalDateTime createdAt) {
     }

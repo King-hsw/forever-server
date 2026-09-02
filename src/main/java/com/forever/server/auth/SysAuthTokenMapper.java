@@ -16,6 +16,8 @@ public interface SysAuthTokenMapper {
 
     int deleteByRefreshToken(@Param("refreshToken") String refreshTokenHash);
 
-    /** 清理 refresh 已过期的死行，登录/换发时顺手执行 */
+    /**
+     * 清理 refresh 已过期的死行，登录/换发时顺手执行
+     */
     void purgeExpired();
 }

@@ -4,10 +4,13 @@
 <mapper namespace="com.forever.server.article.ArticleTagMapper">
 
     <insert id="insert">
-        INSERT INTO article_tag (article_id, tag_id) VALUES (#{articleId}, #{tagId})
+        INSERT INTO article_tag (article_id, tag_id)
+        VALUES (#{articleId}, #{tagId})
     </insert>
 
     <delete id="deleteByArticleId">
-        DELETE FROM article_tag WHERE article_id = #{articleId}
+        DELETE
+        FROM article_tag
+        WHERE article_id = #{articleId}
     </delete>
 </mapper>

@@ -9,22 +9,32 @@
     </insert>
 
     <select id="findByAccessToken" resultType="com.forever.server.auth.SysAuthToken">
-        SELECT * FROM sys_auth_token WHERE access_token = #{accessToken}
+        SELECT *
+        FROM sys_auth_token
+        WHERE access_token = #{accessToken}
     </select>
 
     <select id="findByRefreshToken" resultType="com.forever.server.auth.SysAuthToken">
-        SELECT * FROM sys_auth_token WHERE refresh_token = #{refreshToken}
+        SELECT *
+        FROM sys_auth_token
+        WHERE refresh_token = #{refreshToken}
     </select>
 
     <delete id="deleteById">
-        DELETE FROM sys_auth_token WHERE id = #{id}
+        DELETE
+        FROM sys_auth_token
+        WHERE id = #{id}
     </delete>
 
     <delete id="deleteByRefreshToken">
-        DELETE FROM sys_auth_token WHERE refresh_token = #{refreshToken}
+        DELETE
+        FROM sys_auth_token
+        WHERE refresh_token = #{refreshToken}
     </delete>
 
     <delete id="purgeExpired">
-        DELETE FROM sys_auth_token WHERE refresh_expires_at &lt; CURRENT_TIMESTAMP
+        DELETE
+        FROM sys_auth_token
+        WHERE refresh_expires_at &lt; CURRENT_TIMESTAMP
     </delete>
 </mapper>

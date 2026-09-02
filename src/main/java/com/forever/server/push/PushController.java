@@ -5,12 +5,9 @@ import com.forever.server.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -21,13 +18,10 @@ import java.util.Map;
 @Tag(name = "推送（前台）", description = "Web Push 订阅与送达回执，公开接口")
 @RestController
 @RequestMapping("/api/v1/push")
+@RequiredArgsConstructor
 public class PushController {
 
     private final PushService service;
-
-    public PushController(PushService service) {
-        this.service = service;
-    }
 
     @Operation(summary = "VAPID 公钥", description = "前端 pushManager.subscribe 的 applicationServerKey；推送未配置时报 503")
     @GetMapping("/vapid")
@@ -62,7 +56,9 @@ public class PushController {
         return ApiResponse.ok(service.deliveredSummary());
     }
 
-    /** 带登录态订阅时返回当前用户，游客返回 null */
+    /**
+     * 带登录态订阅时返回当前用户，游客返回 null
+     */
     private static AuthPrincipal currentPrincipal() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
         return auth != null && auth.getPrincipal() instanceof AuthPrincipal principal ? principal : null;

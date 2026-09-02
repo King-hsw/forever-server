@@ -12,17 +12,14 @@ import com.forever.server.common.Strings;
 import com.forever.server.moment.MomentMapper;
 import com.forever.server.sensitive.SensitiveWordService;
 import com.forever.server.setting.SiteConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
@@ -31,18 +28,23 @@ import java.util.stream.Collectors;
  * 组装两层楼（根评论倒序、楼内回复正序）。游客发评要求昵称+邮箱，登录用户在动态下
  * 自动以 sys_user 资料身份发言；写入前做敏感词替换（{@link SensitiveWordService#mask}），
  * 是否直接过审、同 IP 发评间隔均由站点设置控制；落库后发布 CommentCreatedEvent
- *（邮件 / Web Push / 站内消息等渠道各自订阅，失败不影响评论）。
+ * （邮件 / Web Push / 站内消息等渠道各自订阅，失败不影响评论）。
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class CommentService {
 
-    /** 同 IP 发评最小间隔（秒），可通过 blog.comment.post-interval-seconds 覆盖 */
+    /**
+     * 同 IP 发评最小间隔（秒），可通过 blog.comment.post-interval-seconds 覆盖
+     */
     private static final long DEFAULT_POST_INTERVAL_SECONDS = 10;
 
     static final String TARGET_ARTICLE = "ARTICLE";
     static final String TARGET_BOARD = "BOARD";
-    /** MOMENT 目标供 moment 包引用 */
+    /**
+     * MOMENT 目标供 moment 包引用
+     */
     public static final String TARGET_MOMENT = "MOMENT";
 
     private final CommentMapper commentMapper;
@@ -52,24 +54,10 @@ public class CommentService {
     private final SiteConfigService siteConfig;
     private final SysUserMapper sysUserMapper;
     private final ApplicationEventPublisher eventPublisher;
-    /** IP -> 上次发评时间，简单内存限流（单实例够用） */
+    /**
+     * IP -> 上次发评时间，简单内存限流（单实例够用）
+     */
     private final Map<String, LocalDateTime> lastPostByIp = new ConcurrentHashMap<>();
-
-    public CommentService(CommentMapper commentMapper,
-                          ArticleMapper articleMapper,
-                          MomentMapper momentMapper,
-                          SensitiveWordService sensitiveWordService,
-                          SiteConfigService siteConfig,
-                          SysUserMapper sysUserMapper,
-                          ApplicationEventPublisher eventPublisher) {
-        this.commentMapper = commentMapper;
-        this.articleMapper = articleMapper;
-        this.momentMapper = momentMapper;
-        this.sensitiveWordService = sensitiveWordService;
-        this.siteConfig = siteConfig;
-        this.sysUserMapper = sysUserMapper;
-        this.eventPublisher = eventPublisher;
-    }
 
     // ---------- 公开端 ----------
 
@@ -80,12 +68,16 @@ public class CommentService {
         return pageRoots(TARGET_ARTICLE, articleId, page, size);
     }
 
-    /** 留言板分页（BOARD 评论全部挂在固定 target_id = 0 上） */
+    /**
+     * 留言板分页（BOARD 评论全部挂在固定 target_id = 0 上）
+     */
     public PageResult<CommentResponse> pageByBoard(int page, int size) {
         return pageRoots(TARGET_BOARD, 0L, page, size);
     }
 
-    /** 动态评论分页（MOMENT 评论挂在 target_id = 动态 id 上） */
+    /**
+     * 动态评论分页（MOMENT 评论挂在 target_id = 动态 id 上）
+     */
     public PageResult<CommentResponse> pageByMoment(Long momentId, int page, int size) {
         return pageRoots(TARGET_MOMENT, momentId, page, size);
     }
@@ -111,8 +103,8 @@ public class CommentService {
                     .forEach(parentIds::add));
             Map<Long, Comment> parents = parentIds.isEmpty() ? Map.of()
                     : commentMapper.findByIds(new ArrayList<>(parentIds)).stream()
-                            .filter(c -> "APPROVED".equals(c.getStatus()))
-                            .collect(Collectors.toMap(Comment::getId, c -> c));
+                    .filter(c -> "APPROVED".equals(c.getStatus()))
+                    .collect(Collectors.toMap(Comment::getId, c -> c));
 
             items = roots.stream()
                     .map(root -> {
@@ -146,13 +138,17 @@ public class CommentService {
                 request, ip, visitorIdentity(request));
     }
 
-    /** 发表留言板留言（不关联文章） */
+    /**
+     * 发表留言板留言（不关联文章）
+     */
     public CommentAdminResponse createBoard(CommentCreateRequest request, String ip) {
         return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), "/chat",
                 request, ip, visitorIdentity(request));
     }
 
-    /** 发表动态评论：登录用户（viewerUid 非空）自动以其 sys_user 资料身份发布，邮箱可为空 */
+    /**
+     * 发表动态评论：登录用户（viewerUid 非空）自动以其 sys_user 资料身份发布，邮箱可为空
+     */
     public CommentAdminResponse createMoment(Long momentId, Long viewerUid, CommentCreateRequest request, String ip) {
         if (momentMapper.findById(momentId) == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "动态不存在");
@@ -227,11 +223,15 @@ public class CommentService {
 
     // ---------- internal ----------
 
-    /** 发言身份：归属账号 uid（游客为空）+ 昵称 + 邮箱（可为空，登录用户资料未填时）+ 主页 */
+    /**
+     * 发言身份：归属账号 uid（游客为空）+ 昵称 + 邮箱（可为空，登录用户资料未填时）+ 主页
+     */
     private record Identity(Long uid, String nickname, String email, String site) {
     }
 
-    /** 游客身份：取自请求体；DB 允许邮箱为空（登录用户），游客仍显式要求 */
+    /**
+     * 游客身份：取自请求体；DB 允许邮箱为空（登录用户），游客仍显式要求
+     */
     private Identity visitorIdentity(CommentCreateRequest request) {
         if (request.email() == null || request.email().isBlank()) {
             throw new BizException(ErrorCode.BAD_REQUEST, "邮箱不能为空");
@@ -239,7 +239,9 @@ public class CommentService {
         return new Identity(null, request.nickname().trim(), request.email().trim(), Strings.blankToNull(request.site()));
     }
 
-    /** 登录用户身份：取自 sys_user，忽略请求体携带的身份字段（昵称缺省回落用户名） */
+    /**
+     * 登录用户身份：取自 sys_user，忽略请求体携带的身份字段（昵称缺省回落用户名）
+     */
     private Identity userIdentity(Long uid) {
         SysUser user = sysUserMapper.findById(uid);
         if (user == null) {
@@ -268,7 +270,9 @@ public class CommentService {
         }
     }
 
-    /** 生效间隔：后台站点设置优先，未设置时用内置默认值；0 表示不限流 */
+    /**
+     * 生效间隔：后台站点设置优先，未设置时用内置默认值；0 表示不限流
+     */
     private long postIntervalMs() {
         return Math.max(0, siteConfig.getLong(
                 SiteConfigService.COMMENT_POST_INTERVAL_SECONDS, DEFAULT_POST_INTERVAL_SECONDS)) * 1000;

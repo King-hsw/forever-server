@@ -9,7 +9,9 @@
     </insert>
 
     <select id="findById" resultType="com.forever.server.moment.Moment">
-        SELECT * FROM moment WHERE id = #{id}
+        SELECT *
+        FROM moment
+        WHERE id = #{id}
     </select>
 
     <select id="page" resultType="com.forever.server.moment.Moment">
@@ -28,7 +30,9 @@
     </select>
 
     <delete id="deleteById">
-        DELETE FROM moment WHERE id = #{id}
+        DELETE
+        FROM moment
+        WHERE id = #{id}
     </delete>
 
     <!--  动态评论数（已过审，target_type = MOMENT）  -->

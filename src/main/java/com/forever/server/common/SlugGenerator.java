@@ -10,7 +10,9 @@ public final class SlugGenerator {
     private static final SecureRandom RANDOM = new SecureRandom();
     private static final String ALPHABET = "abcdefghijklmnopqrstuvwxyz0123456789";
 
-    /** 语义化 slug 最大长度，避免超长标题生成超长 URL */
+    /**
+     * 语义化 slug 最大长度，避免超长标题生成超长 URL
+     */
     private static final int MAX_SEMANTIC_LENGTH = 80;
 
     private SlugGenerator() {

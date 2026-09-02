@@ -12,7 +12,9 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 @ConfigurationProperties(prefix = "blog")
 public record BlogProperties(Admin admin) {
 
-    /** 单管理员初始账密，首次启动时写入 sys_user */
+    /**
+     * 单管理员初始账密，首次启动时写入 sys_user
+     */
     public record Admin(String username, String password) {
     }
 }

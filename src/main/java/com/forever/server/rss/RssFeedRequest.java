@@ -4,7 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** 订阅源创建/更新请求 */
+/**
+ * 订阅源创建/更新请求
+ */
 @Schema(description = "RSS 订阅源创建/更新请求")
 public record RssFeedRequest(
         @Schema(description = "站点名称；不填则抓取成功后自动取 feed 自带标题", example = "阮一峰的网络日志")

@@ -12,19 +12,27 @@ import java.time.LocalDateTime;
 public class Comment {
 
     private Long id;
-    /** 归属对象：ARTICLE-文章 id / BOARD-固定 0 */
+    /**
+     * 归属对象：ARTICLE-文章 id / BOARD-固定 0
+     */
     private String targetType;
     private Long targetId;
     private Long parentId;
     private Long rootId;
-    /** 归属账号（登录用户发评时写入，游客为空）；站内消息按此定位收件人 */
+    /**
+     * 归属账号（登录用户发评时写入，游客为空）；站内消息按此定位收件人
+     */
     private Long userId;
     private String nickname;
-    /** 不对外展示，仅用于头像生成与回复邮件通知 */
+    /**
+     * 不对外展示，仅用于头像生成与回复邮件通知
+     */
     private String email;
     private String site;
     private String content;
-    /** APPROVED / PENDING / REJECTED */
+    /**
+     * APPROVED / PENDING / REJECTED
+     */
     private String status;
     private String ip;
     private LocalDateTime createdAt;

@@ -6,23 +6,18 @@ import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "文章·公开接口", description = "前台展示接口，无需认证；仅返回已发布文章，URL 使用 slug")
 @RestController
 @RequestMapping("/api/v1/articles")
+@RequiredArgsConstructor
 public class PublicArticleController {
 
     private final ArticleService articleService;
-
-    public PublicArticleController(ArticleService articleService) {
-        this.articleService = articleService;
-    }
 
     @Operation(summary = "分页查询已发布文章", description = "仅返回 PUBLISHED 状态的文章")
     @GetMapping

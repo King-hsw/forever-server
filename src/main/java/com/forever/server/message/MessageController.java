@@ -1,21 +1,13 @@
 package com.forever.server.message;
 
 import com.forever.server.auth.AuthPrincipal;
-import com.forever.server.common.ApiResponse;
-import com.forever.server.common.BizException;
-import com.forever.server.common.ErrorCode;
-import com.forever.server.common.PageParams;
-import com.forever.server.common.PageResult;
+import com.forever.server.common.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 /**
  * 消息中心：登录账号的站内消息收件箱。
@@ -23,13 +15,10 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @Tag(name = "消息中心", description = "站内消息收件箱，登录后可见")
 @RestController
+@RequiredArgsConstructor
 public class MessageController {
 
     private final MessageService messageService;
-
-    public MessageController(MessageService messageService) {
-        this.messageService = messageService;
-    }
 
     @Operation(summary = "分页查看消息", description = "created_at 倒序")
     @GetMapping("/api/v1/messages")
@@ -71,7 +60,9 @@ public class MessageController {
         return ApiResponse.ok();
     }
 
-    /** 强制登录：/api/v1/** 默认放行，匿名 / 无效凭证统一 401 */
+    /**
+     * 强制登录：/api/v1/** 默认放行，匿名 / 无效凭证统一 401
+     */
     private static long requireUid(Authentication authentication) {
         if (authentication != null && authentication.getPrincipal() instanceof AuthPrincipal p) {
             return p.uid();

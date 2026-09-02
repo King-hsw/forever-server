@@ -7,24 +7,16 @@ import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 @Tag(name = "评论管理", description = "评论审核与维护，需 JWT 认证")
 @RestController
 @RequestMapping("/api/admin/comments")
+@RequiredArgsConstructor
 public class AdminCommentController {
 
     private final CommentService commentService;
-
-    public AdminCommentController(CommentService commentService) {
-        this.commentService = commentService;
-    }
 
     @Perm("comment:list")
     @Operation(summary = "评论列表", description = "管理端全量可见；status 可选 APPROVED / PENDING / REJECTED，targetType 可选 ARTICLE / BOARD，不传查全部")

@@ -6,19 +6,17 @@ import com.forever.server.common.PageResult;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "全局搜索·公开接口", description = "按标题/摘要/正文模糊搜索已发布文章，无需登录")
 @RestController
+@RequiredArgsConstructor
 public class SearchController {
 
     private final SearchService searchService;
-
-    public SearchController(SearchService searchService) {
-        this.searchService = searchService;
-    }
 
     @Operation(summary = "全局搜索", description = """
             匹配标题、摘要或正文；标题命中优先，摘要次之，正文兜底，同分按发布时间倒序。

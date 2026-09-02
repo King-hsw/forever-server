@@ -2,6 +2,7 @@ package com.forever.server.auth;
 
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.HexFormat;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class TokenService {
 
     public static final long ACCESS_TTL_SECONDS = 2 * 3600;          // 2 小时
@@ -28,18 +30,17 @@ public class TokenService {
     private final SysUserMapper userMapper;
     private final SecureRandom random = new SecureRandom();
 
-    public TokenService(SysAuthTokenMapper mapper, SysUserMapper userMapper) {
-        this.mapper = mapper;
-        this.userMapper = userMapper;
-    }
-
-    /** 登录：签发新令牌对 */
+    /**
+     * 登录：签发新令牌对
+     */
     public LoginResponse issue(long uid) {
         mapper.purgeExpired();
         return createPair(uid);
     }
 
-    /** 换发：校验 refresh 有效 → 旧行作废，签发新令牌对（轮换防重放） */
+    /**
+     * 换发：校验 refresh 有效 → 旧行作废，签发新令牌对（轮换防重放）
+     */
     public LoginResponse rotate(String rawRefreshToken) {
         SysAuthToken row = mapper.findByRefreshToken(sha256(rawRefreshToken));
         if (row == null || expired(row.getRefreshExpiresAt())) {
@@ -51,7 +52,9 @@ public class TokenService {
         return createPair(row.getUserId());
     }
 
-    /** 校验 access token，返回用户身份；无效返回 null（按未认证处理） */
+    /**
+     * 校验 access token，返回用户身份；无效返回 null（按未认证处理）
+     */
     public AuthPrincipal resolve(String rawAccessToken) {
         if (rawAccessToken == null || rawAccessToken.isBlank()) {
             return null;
@@ -64,7 +67,9 @@ public class TokenService {
         return new AuthPrincipal(user.getId(), user.getUsername());
     }
 
-    /** 登出：吊销该 refresh 对应的整个会话 */
+    /**
+     * 登出：吊销该 refresh 对应的整个会话
+     */
     public void revokeByRefreshToken(String rawRefreshToken) {
         if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
             return;

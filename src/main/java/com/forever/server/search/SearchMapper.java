@@ -17,7 +17,9 @@ public interface SearchMapper {
 
     long count(@Param("kw") String kw);
 
-    /** 搜索结果行（content 仅用于生成摘要片段，不返回给前端；标签由 ArticleMapper.tagRowsForArticles 批量补齐） */
+    /**
+     * 搜索结果行（content 仅用于生成摘要片段，不返回给前端；标签由 ArticleMapper.tagRowsForArticles 批量补齐）
+     */
     record SearchRow(Long id, String slug, String title, String summary, String content,
                      String categoryName, LocalDateTime createdAt) {
     }

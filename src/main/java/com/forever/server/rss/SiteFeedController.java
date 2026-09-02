@@ -3,14 +3,11 @@ package com.forever.server.rss;
 import com.forever.server.article.Article;
 import com.forever.server.article.ArticleMapper;
 import com.forever.server.setting.SiteConfigService;
-import com.rometools.rome.feed.synd.SyndContentImpl;
-import com.rometools.rome.feed.synd.SyndEntryImpl;
-import com.rometools.rome.feed.synd.SyndFeedImpl;
-import com.rometools.rome.feed.synd.SyndEntry;
-import com.rometools.rome.feed.synd.SyndFeed;
+import com.rometools.rome.feed.synd.*;
 import com.rometools.rome.io.SyndFeedOutput;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,17 +23,13 @@ import java.util.List;
  */
 @Tag(name = "RSS·本站输出", description = "对外提供本站文章的 RSS 订阅源")
 @RestController
+@RequiredArgsConstructor
 public class SiteFeedController {
 
     private static final int FEED_SIZE = 20;
 
     private final ArticleMapper articleMapper;
     private final SiteConfigService siteConfig;
-
-    public SiteFeedController(ArticleMapper articleMapper, SiteConfigService siteConfig) {
-        this.articleMapper = articleMapper;
-        this.siteConfig = siteConfig;
-    }
 
     @Operation(summary = "本站 RSS 订阅源", description = "RSS 2.0 格式，返回最新 20 篇已发布文章；" +
             "文章链接基于后台站点设置 site.url 拼接")

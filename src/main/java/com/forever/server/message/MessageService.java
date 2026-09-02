@@ -7,6 +7,7 @@ import com.forever.server.comment.CommentCreatedEvent;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
 import com.forever.server.config.BlogProperties;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -19,6 +20,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class MessageService {
 
     public static final String TYPE_COMMENT_REPLY = "COMMENT_REPLY";
@@ -28,15 +30,9 @@ public class MessageService {
     private final SysUserMapper sysUserMapper;
     private final BlogProperties blogProperties;
 
-    public MessageService(MessageMapper messageMapper,
-                          SysUserMapper sysUserMapper,
-                          BlogProperties blogProperties) {
-        this.messageMapper = messageMapper;
-        this.sysUserMapper = sysUserMapper;
-        this.blogProperties = blogProperties;
-    }
-
-    /** 评论落库 → 写入相关收件人；失败只记日志，不影响评论 */
+    /**
+     * 评论落库 → 写入相关收件人；失败只记日志，不影响评论
+     */
     @EventListener
     public void onCommentCreated(CommentCreatedEvent event) {
         try {
@@ -76,7 +72,9 @@ public class MessageService {
         messageMapper.insert(message);
     }
 
-    /** 站长账号 uid（与 CommentNotifyService 的判定保持一致） */
+    /**
+     * 站长账号 uid（与 CommentNotifyService 的判定保持一致）
+     */
     private Long ownerUid() {
         String username = blogProperties.admin().username();
         if (username == null || username.isBlank()) {

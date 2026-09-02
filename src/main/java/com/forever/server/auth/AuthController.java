@@ -5,6 +5,7 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -13,15 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "认证", description = "登录认证，登录成功后用返回的 JWT 访问 /api/admin/** 接口")
 @RestController
 @RequestMapping("/api/auth")
+@RequiredArgsConstructor
 public class AuthController {
 
     private final AuthService authService;
     private final TokenService tokenService;
-
-    public AuthController(AuthService authService, TokenService tokenService) {
-        this.authService = authService;
-        this.tokenService = tokenService;
-    }
 
     @Operation(summary = "登录", description = "校验用户名密码，签发双令牌（access + refresh）；登录成败均入审计日志")
     @PostMapping("/login")
@@ -46,7 +43,9 @@ public class AuthController {
     public record RefreshRequest(String refreshToken) {
     }
 
-    /** 优先取代理转发头，兼容 Nginx 反代部署 */
+    /**
+     * 优先取代理转发头，兼容 Nginx 反代部署
+     */
     private static String clientIp(HttpServletRequest request) {
         String xff = request.getHeader("X-Forwarded-For");
         if (xff != null && !xff.isBlank()) {

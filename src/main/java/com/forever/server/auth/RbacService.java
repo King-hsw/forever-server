@@ -2,6 +2,7 @@ package com.forever.server.auth;
 
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class RbacService {
 
     public static final String PERM_ADMIN_ACCESS = "admin:access";
@@ -29,18 +31,16 @@ public class RbacService {
     private final RbacMapper rbacMapper;
     private final SysUserMapper sysUserMapper;
     private final PasswordEncoder passwordEncoder;
-    /** uid -> 权限码集合；DISABLED 用户为空集合 */
+    /**
+     * uid -> 权限码集合；DISABLED 用户为空集合
+     */
     private final Map<Long, Set<String>> permsByUser = new ConcurrentHashMap<>();
-
-    public RbacService(RbacMapper rbacMapper, SysUserMapper sysUserMapper, PasswordEncoder passwordEncoder) {
-        this.rbacMapper = rbacMapper;
-        this.sysUserMapper = sysUserMapper;
-        this.passwordEncoder = passwordEncoder;
-    }
 
     // ---------- 鉴权 ----------
 
-    /** 用户的全部权限码；查库后缓存。DISABLED 用户返回空集，立即失去所有访问。 */
+    /**
+     * 用户的全部权限码；查库后缓存。DISABLED 用户返回空集，立即失去所有访问。
+     */
     public Set<String> permissionsOf(long uid) {
         return permsByUser.computeIfAbsent(uid, id -> {
             Set<String> codes = rbacMapper.permissionsByUserId(id).stream()
@@ -51,7 +51,9 @@ public class RbacService {
         });
     }
 
-    /** 用户的角色列表（管理端展示 / me 接口用） */
+    /**
+     * 用户的角色列表（管理端展示 / me 接口用）
+     */
     public List<SysRole> rolesOf(long uid) {
         Map<Long, SysRole> byId = rbacMapper.listRoles().stream()
                 .collect(Collectors.toMap(SysRole::getId, r -> r));
@@ -63,7 +65,9 @@ public class RbacService {
         return permissionsOf(uid).contains(permissionCode);
     }
 
-    /** 角色/用户关系变更后失效对应缓存；uid 传 null 清空全部 */
+    /**
+     * 角色/用户关系变更后失效对应缓存；uid 传 null 清空全部
+     */
     public void evict(Long uid) {
         if (uid == null) {
             permsByUser.clear();
@@ -84,7 +88,9 @@ public class RbacService {
         ).toList();
     }
 
-    /** 用户当前角色编码集合 */
+    /**
+     * 用户当前角色编码集合
+     */
     public Set<String> roleCodesOf(long uid) {
         return rolesOf(uid).stream().map(SysRole::getCode).collect(Collectors.toSet());
     }
@@ -133,7 +139,7 @@ public class RbacService {
     // ---------- 角色管理 ----------
 
     public List<Map<String, Object>> listRolesWithPermissions() {
-        return rbacMapper.listRoles().stream().map(r -> Map.<String, Object>of(
+        return rbacMapper.listRoles().stream().map(r -> Map.of(
                 "id", r.getId(),
                 "code", r.getCode(),
                 "name", r.getName(),
@@ -143,7 +149,9 @@ public class RbacService {
         )).toList();
     }
 
-    /** 覆盖式设置角色权限 */
+    /**
+     * 覆盖式设置角色权限
+     */
     public void updateRolePermissions(Long roleId, List<Long> permissionIds) {
         requireRole(roleId);
         rbacMapper.deleteRolePermissions(roleId);

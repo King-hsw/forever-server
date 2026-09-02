@@ -3,6 +3,7 @@ package com.forever.server.storage;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.setting.SiteConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Component;
@@ -16,19 +17,17 @@ import java.time.Duration;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class StorageSettings {
 
-    /** 构建 S3 客户端所依据的目标元组，任一项变化即触发重建 */
+    /**
+     * 构建 S3 客户端所依据的目标元组，任一项变化即触发重建
+     */
     public record S3Target(String endpoint, String accessKey, String secretKey, String bucket) {
     }
 
     private final SiteConfigService siteConfig;
     private final StorageProperties props;
-
-    public StorageSettings(SiteConfigService siteConfig, StorageProperties props) {
-        this.siteConfig = siteConfig;
-        this.props = props;
-    }
 
     public String endpoint() {
         return siteConfig.getString(SiteConfigService.STORAGE_ENDPOINT, props.endpoint());

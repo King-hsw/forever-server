@@ -4,7 +4,9 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
-/** 友链申请请求（访客提交） */
+/**
+ * 友链申请请求（访客提交）
+ */
 @Schema(description = "友链申请请求")
 public record FriendLinkApplyRequest(
         @Schema(description = "站点名称", example = "张三的小站")

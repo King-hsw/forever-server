@@ -2,7 +2,9 @@ package com.forever.server.auth;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-/** 登录响应体（双令牌：access 随请求提交，refresh 仅用于换新） */
+/**
+ * 登录响应体（双令牌：access 随请求提交，refresh 仅用于换新）
+ */
 @Schema(description = "登录响应")
 public record LoginResponse(
         @Schema(description = "访问令牌，放在 Authorization: Bearer 头中，短期有效") String accessToken,

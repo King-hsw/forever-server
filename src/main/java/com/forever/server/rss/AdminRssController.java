@@ -5,27 +5,18 @@ import com.forever.server.common.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @Tag(name = "RSS 订阅管理", description = "管理端订阅源维护接口，需 JWT 认证")
 @RestController
 @RequestMapping("/api/admin/rss/feeds")
+@RequiredArgsConstructor
 public class AdminRssController {
 
     private final RssService rssService;
-
-    public AdminRssController(RssService rssService) {
-        this.rssService = rssService;
-    }
 
     @Perm("rss:list")
     @Operation(summary = "订阅源列表", description = "全量返回，附带每个源的条目数、上次抓取时间与错误信息")

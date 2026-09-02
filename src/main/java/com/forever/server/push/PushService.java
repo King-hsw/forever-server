@@ -27,16 +27,22 @@ public class PushService {
 
     private static final Logger log = LoggerFactory.getLogger(PushService.class);
 
-    /** 推送服务的离线保留时长（秒）：设备离线 1 小时内回来仍能收到 */
+    /**
+     * 推送服务的离线保留时长（秒）：设备离线 1 小时内回来仍能收到
+     */
     private static final int TTL_SECONDS = 3600;
 
     private final PushSubscriptionMapper mapper;
     private final SysUserMapper sysUserMapper;
     private final PushVapidProperties vapid;
-    /** 仅序列化三字段载荷，直接实例化（同 MomentService）；Boot 4 自动配置的 ObjectMapper 是 Jackson 3 类型，注入不到 */
+    /**
+     * 仅序列化三字段载荷，直接实例化（同 MomentService）；Boot 4 自动配置的 ObjectMapper 是 Jackson 3 类型，注入不到
+     */
     private final ObjectMapper objectMapper = new ObjectMapper();
-    /** web-push 发送器；VAPID 未配置时为 null，代表推送功能关闭。
-     *  库类与业务类同名，用全限定名引用 */
+    /**
+     * web-push 发送器；VAPID 未配置时为 null，代表推送功能关闭。
+     * 库类与业务类同名，用全限定名引用
+     */
     private final nl.martijndwars.webpush.PushService sender;
 
     public PushService(PushSubscriptionMapper mapper, SysUserMapper sysUserMapper, PushVapidProperties vapid) {
@@ -56,7 +62,9 @@ public class PushService {
         log.info("web push {}", sender != null ? "enabled, subject=" + vapid.subject() : "disabled (blog.push.vapid 未配置)");
     }
 
-    /** 下发给前端的 VAPID 公钥（pushManager.subscribe 的 applicationServerKey） */
+    /**
+     * 下发给前端的 VAPID 公钥（pushManager.subscribe 的 applicationServerKey）
+     */
     public String publicKey() {
         requireConfigured();
         return vapid.publicKey();
@@ -93,7 +101,9 @@ public class PushService {
         log.info("push subscription removed: endpointTail={}", tail(endpoint));
     }
 
-    /** 全量订阅（管理端列表用） */
+    /**
+     * 全量订阅（管理端列表用）
+     */
     public List<PushSubscription> listSubscriptions() {
         return mapper.findAll();
     }
@@ -117,7 +127,9 @@ public class PushService {
         return sendTo(mapper.findByUserId(userId), title, body, url);
     }
 
-    /** 定向推送：发给某邮箱名下的全部订阅（评论回复通知被回复者用），邮箱空直接跳过 */
+    /**
+     * 定向推送：发给某邮箱名下的全部订阅（评论回复通知被回复者用），邮箱空直接跳过
+     */
     public PushSendResult sendToEmail(String email, String title, String body, String url) {
         if (email == null || email.isBlank())
             return new PushSendResult(0, 0, 0);
@@ -178,12 +190,16 @@ public class PushService {
         }
     }
 
-    /** SW 送达回执：收到 push 事件即更新订阅行的回执时间 */
+    /**
+     * SW 送达回执：收到 push 事件即更新订阅行的回执时间
+     */
     public void markDelivered(String endpoint) {
         mapper.markDelivered(endpoint, LocalDateTime.now());
     }
 
-    /** 送达概况：已确认送达的订阅数与最近一次回执时间（页面轮询展示用） */
+    /**
+     * 送达概况：已确认送达的订阅数与最近一次回执时间（页面轮询展示用）
+     */
     public DeliveredResponse deliveredSummary() {
         return new DeliveredResponse(mapper.countDelivered(), mapper.maxDeliveredAt());
     }
@@ -194,7 +210,9 @@ public class PushService {
                     "推送功能未配置：请在 local/application-local.yml 或环境变量设置 blog.push.vapid.*");
     }
 
-    /** 推送载荷：{"title","body","url"}，与前端 sw.ts 的 push 事件解析约定一致 */
+    /**
+     * 推送载荷：{"title","body","url"}，与前端 sw.ts 的 push 事件解析约定一致
+     */
     private String payload(String title, String body, String url) {
         try {
             return objectMapper.writeValueAsString(new PushPayload(title, body, url));
@@ -207,7 +225,9 @@ public class PushService {
         return endpoint == null || endpoint.length() <= 24 ? endpoint : endpoint.substring(endpoint.length() - 24);
     }
 
-    /** 推送载荷（仅内部序列化用） */
+    /**
+     * 推送载荷（仅内部序列化用）
+     */
     record PushPayload(String title, String body, String url) {
     }
 }
