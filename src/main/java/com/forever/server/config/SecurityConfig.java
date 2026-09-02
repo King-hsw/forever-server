@@ -86,7 +86,8 @@ public class SecurityConfig {
                         // 登录/换发/登出接口
                         .requestMatchers("/api/auth/**").permitAll()
                         // 前台公开接口（含访客评论的读写）与本站 RSS 输出
-                        .requestMatchers("/api/v1/**", "/rss").permitAll()
+                        // /rss.xml 是 /rss 的后缀形式别名，两者都需放行
+                        .requestMatchers("/api/v1/**", "/rss", "/rss.xml").permitAll()
                         // 健康检查与 API 文档
                         .requestMatchers("/actuator/health",
                                 "/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()

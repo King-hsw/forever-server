@@ -33,7 +33,8 @@ public class SiteFeedController {
 
     @Operation(summary = "本站 RSS 订阅源", description = "RSS 2.0 格式，返回最新 20 篇已发布文章；" +
             "文章链接基于后台站点设置 site.url 拼接")
-    @GetMapping(value = "/rss", produces = MediaType.APPLICATION_RSS_XML_VALUE)
+    // /rss 为历史路径（已有订阅者指向它），/rss.xml 为 robots.txt 与常规约定使用的后缀形式
+    @GetMapping(value = {"/rss", "/rss.xml"}, produces = MediaType.APPLICATION_RSS_XML_VALUE)
     public ResponseEntity<String> rss() throws com.rometools.rome.io.FeedException {
         String siteUrl = trimTrailingSlash(siteConfig.getString(SiteConfigService.SITE_URL, ""));
 
@@ -50,8 +51,12 @@ public class SiteFeedController {
         for (Article a : articles) {
             SyndEntry entry = new SyndEntryImpl();
             entry.setTitle(a.getTitle());
-            entry.setLink(siteUrl + "/articles/" + a.getSlug());
-            entry.setUri(siteUrl + "/articles/" + a.getSlug());
+            // 文章前台路由：与前端 app/pages/posts/[slug].vue 对应。
+            // 原先写作 /articles/{slug}，而前端实际路由是 /posts/{slug}，
+            // 导致 RSS 里每篇文章的链接都是 404——改前端路由时此处必须同步
+            String link = siteUrl + "/posts/" + a.getSlug();
+            entry.setLink(link);
+            entry.setUri(link);
             Date published = toDate(a.getPublishedAt() != null ? a.getPublishedAt() : a.getCreatedAt());
             entry.setPublishedDate(published);
             entry.setUpdatedDate(toDate(a.getUpdatedAt()));
