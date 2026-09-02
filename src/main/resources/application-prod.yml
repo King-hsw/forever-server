@@ -1,13 +1,5 @@
-spring:
-  datasource:
-    url: ${DB_URL}
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-  # 动态媒体上传：单文件 120MB（视频 100MB 上限留余量）/ 单请求 130MB
-  servlet:
-    multipart:
-      max-file-size: 120MB
-      max-request-size: 130MB
+# 数据源走 compose 注入的 SPRING_DATASOURCE_URL/USERNAME/PASSWORD 环境变量（优先级高于本文件）；
+# multipart 上传上限（120MB/130MB）与日志文件路径（logs/forever-server.log，logback 内置默认值）在 base 配置/logback-spring.xml 维护
 
 blog:
   admin:
@@ -17,11 +9,6 @@ blog:
 
 # 评论策略、站点地址、文件存储（storage.*）等运行参数均在后台「站点设置」（PUT /api/admin/settings）
 # 在线调整、即时生效；文件存储在后台配置完成后上传/下载才可用，未配置仅影响该功能、应用正常启动
-
-logging:
-  # 路径供 logback-spring.xml 中的 springProperty 读取；滚动策略在 XML 中维护
-  file:
-    name: logs/forever-server.log
 
 springdoc:
   api-docs:
