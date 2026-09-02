@@ -161,3 +161,52 @@ jobs:
             done
             [[ $ok == 1 ]] || { echo "::error::skopeo copy $IMAGE:$TAG → $DH_IMAGE:$TAG 重试 5 次仍失败"; exit 1; }
           done
+
+  tencent:
+    # 把现成的多架构镜像整体复制到腾讯云 CCR（与 dockerhub job 同款，不重建）
+    needs: merge
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: 安装 skopeo
+        run: sudo apt-get update -y && sudo apt-get install -y skopeo
+
+      - name: 复制镜像到腾讯云 CCR
+        env:
+          CCR_IMAGE: ccr.ccs.tencentyun.com/king-hsw/forever-server
+          CCR_USER: ${{ secrets.TENCENT_CCR_USERNAME }}
+          CCR_PASS: ${{ secrets.TENCENT_CCR_PASSWORD }}
+          # GITHUB_TOKEN 必须显式从 secrets 注入，且不能用 GITHUB_ 前缀命名
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # 凭据为空时 skopeo 不报错而是回退交互式输入，先体检：只报「有没有值」
+          missing=0
+          for v in CCR_IMAGE CCR_USER CCR_PASS GH_TOKEN; do
+            if [[ -n "${!v}" ]]; then
+              echo "✓ $v 已注入"
+            else
+              echo "::error::$v 为空（未配置，或没写进本 step 的 env:）"
+              missing=1
+            fi
+          done
+          [[ $missing == 0 ]] || exit 1
+
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
+          TAGS=(latest)
+          [[ "$GITHUB_REF" == refs/tags/v* ]] && TAGS+=("${GITHUB_REF#refs/tags/}")
+          for TAG in "${TAGS[@]}"; do
+            ok=0
+            for i in 1 2 3 4 5; do
+              # 直接传 --src-creds/--dest-creds：不走 skopeo login，
+              # 也就不会有 authfile 缺失导致回退交互式输入的问题
+              if skopeo copy --all \
+                   --src-creds "$GITHUB_ACTOR:$GH_TOKEN" \
+                   --dest-creds "$CCR_USER:$CCR_PASS" \
+                   "docker://$IMAGE:$TAG" "docker://$CCR_IMAGE:$TAG"; then ok=1; break; fi
+              echo "::warning::$TAG 复制失败，15s 后重试（$i/5）"
+              sleep 15
+            done
+            [[ $ok == 1 ]] || { echo "::error::skopeo copy $IMAGE:$TAG → $CCR_IMAGE:$TAG 重试 5 次仍失败"; exit 1; }
+          done
