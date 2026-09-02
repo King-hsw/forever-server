@@ -126,19 +126,38 @@ jobs:
           DH_IMAGE: ${{ vars.DOCKERHUB_IMAGE }}
           DH_USER: ${{ secrets.DOCKERHUB_USERNAME }}
           DH_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+          # GITHUB_TOKEN 不是默认环境变量（默认只有 GITHUB_ACTOR/GITHUB_REF 等），
+          # 必须显式从 secrets 注入；且不能用 GITHUB_ 前缀命名，故取名 GH_TOKEN
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           IMAGE="ghcr.io/${GITHUB_REPOSITORY,,}"
-          test -n "$DH_IMAGE" || { echo "请先在仓库 Settings → Variables 配置 DOCKERHUB_IMAGE（全小写，如 xxx/forever-server）"; exit 1; }
-          echo "$GITHUB_TOKEN" | skopeo login ghcr.io -u "$GITHUB_ACTOR" --password-stdin
-          echo "$DH_TOKEN" | skopeo login docker.io -u "$DH_USER" --password-stdin
+          # 凭据为空时 skopeo 不报错，而是回退成交互式输入（CI 无 tty，最终报
+          # "inappropriate ioctl for device"），所以先体检：只报「有没有值」，不打印值
+          missing=0
+          for v in DH_IMAGE DH_USER DH_TOKEN GH_TOKEN; do
+            if [[ -n "${!v}" ]]; then
+              echo "✓ $v 已注入"
+            else
+              echo "::error::$v 为空（未配置，或没写进本 step 的 env:）"
+              missing=1
+            fi
+          done
+          [[ $missing == 0 ]] || { echo "缺 DH_IMAGE/DH_USER/DH_TOKEN 见仓库 Settings 的 Variables/Secrets；GH_TOKEN 为空说明 secrets.GITHUB_TOKEN 未注入本 step"; exit 1; }
+
           TAGS=(latest)
           [[ "$GITHUB_REF" == refs/tags/v* ]] && TAGS+=("${GITHUB_REF#refs/tags/}")
           for TAG in "${TAGS[@]}"; do
             ok=0
-            for i in 1 2 3; do
+            for i in 1 2 3 4 5; do
               # 跨 runner 刚打的 tag 也可能有短暂一致性延迟
-              if skopeo copy --all "docker://$IMAGE:$TAG" "docker://$DH_IMAGE:$TAG"; then ok=1; break; fi
-              sleep 10
+              # 直接传 --src-creds/--dest-creds：不走 skopeo login，
+              # 也就不会有 authfile 缺失导致回退交互式输入的问题
+              if skopeo copy --all \
+                   --src-creds "$GITHUB_ACTOR:$GH_TOKEN" \
+                   --dest-creds "$DH_USER:$DH_TOKEN" \
+                   "docker://$IMAGE:$TAG" "docker://$DH_IMAGE:$TAG"; then ok=1; break; fi
+              echo "::warning::$TAG 复制失败，15s 后重试（$i/5）"
+              sleep 15
             done
-            [[ $ok == 1 ]] || { echo "skopeo copy $IMAGE:$TAG → $DH_IMAGE:$TAG 重试 3 次仍失败" >&2; exit 1; }
+            [[ $ok == 1 ]] || { echo "::error::skopeo copy $IMAGE:$TAG → $DH_IMAGE:$TAG 重试 5 次仍失败"; exit 1; }
           done
