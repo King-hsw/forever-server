@@ -3,7 +3,6 @@ package com.forever.server.setting;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.convert.DurationStyle;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -104,29 +103,6 @@ public class SiteConfigService {
      */
     public static final String MOMENTS_AMAP_KEY = "moments.amapKey";
 
-    // ---------- 文件存储（RustFS 对象存储；未配置的项回落 yml/环境变量，见 StorageSettings） ----------
-
-    /**
-     * 对象存储的 S3 API 地址（必填），如 http://127.0.0.1:9000
-     */
-    public static final String STORAGE_ENDPOINT = "storage.endpoint";
-    /**
-     * 对象存储访问密钥（必填）
-     */
-    public static final String STORAGE_ACCESS_KEY = "storage.access-key";
-    /**
-     * 对象存储秘密密钥（必填）
-     */
-    public static final String STORAGE_SECRET_KEY = "storage.secret-key";
-    /**
-     * 存储桶名（必填），缺失时首次使用自动创建
-     */
-    public static final String STORAGE_BUCKET = "storage.bucket";
-    /**
-     * 预签名 URL 有效期（直传 PUT 与分片共用），如 15m / PT15M，默认 15m
-     */
-    public static final String STORAGE_PRESIGN_TTL = "storage.presign-ttl";
-
     /**
      * 已知配置项元数据：key -> 中文说明（新增可调参数在这里登记）
      */
@@ -150,12 +126,7 @@ public class SiteConfigService {
             Map.entry(AI_API_KEY, "AI 服务的 API Key（OpenAI 兼容接口）"),
             Map.entry(AI_BASE_URL, "AI 服务地址（API 根地址，不含 /v1；Spring AI 自动补 /v1/chat/completions；OpenAI 官方即 https://api.openai.com，DeepSeek 即 https://api.deepseek.com）"),
             Map.entry(AI_MODEL, "AI 模型名（如 gpt-4o-mini / deepseek-chat，默认 gpt-4o-mini）"),
-            Map.entry(MOMENTS_AMAP_KEY, "高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null）"),
-            Map.entry(STORAGE_ENDPOINT, "对象存储 S3 API 地址（必填），如 http://127.0.0.1:9000"),
-            Map.entry(STORAGE_ACCESS_KEY, "对象存储 Access Key（必填）"),
-            Map.entry(STORAGE_SECRET_KEY, "对象存储 Secret Key（必填）"),
-            Map.entry(STORAGE_BUCKET, "存储桶名（必填），缺失时首次使用自动创建"),
-            Map.entry(STORAGE_PRESIGN_TTL, "预签名 URL 有效期（直传 PUT 与分片共用），如 15m 或 PT15M，默认 15m")
+            Map.entry(MOMENTS_AMAP_KEY, "高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null）")
     );
 
     private final SiteConfigMapper mapper;
@@ -166,8 +137,7 @@ public class SiteConfigService {
     /**
      * 值为密钥的配置项：更新日志中需脱敏，避免明文入日志文件
      */
-    private static final Set<String> SENSITIVE_KEYS = Set.of(
-            STORAGE_ACCESS_KEY, STORAGE_SECRET_KEY, AI_API_KEY, MAIL_PASSWORD);
+    private static final Set<String> SENSITIVE_KEYS = Set.of(AI_API_KEY, MAIL_PASSWORD);
 
     public SiteConfigService(SiteConfigMapper mapper) {
         this.mapper = mapper;
@@ -330,15 +300,6 @@ public class SiteConfigService {
             throw new BizException(ErrorCode.BAD_REQUEST, "站点地址必须以 http:// 或 https:// 开头");
         } else if (key.equals(SITE_BIRTH_DATE) && !trimmed.isEmpty() && !trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "建站日期格式必须为 yyyy-MM-dd");
-        } else if (key.equals(STORAGE_ENDPOINT)
-                && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "S3 地址必须以 http:// 或 https:// 开头");
-        } else if (key.equals(STORAGE_PRESIGN_TTL)) {
-            try {
-                DurationStyle.detectAndParse(trimmed);
-            } catch (IllegalArgumentException e) {
-                throw new BizException(ErrorCode.BAD_REQUEST, "有效期格式不正确，如 15m / 30s / PT15M");
-            }
         }
 
         mapper.upsert(key, trimmed);

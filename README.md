@@ -144,10 +144,10 @@
 上传文件（头像、动态媒体）统一写入 S3 兼容对象存储 **RustFS**（官方推荐 AWS SDK v2 接入，path-style + us-east-1）。应用只读写对象，**不建桶、不改桶策略**——桶需预先在 RustFS 控制台建好并设为公开读。数据库与前端一律存/用 **RustFS 直链**（`{endpoint}/{bucket}/{key}`），读取不经应用：
 
 - 缓存策略不在代码里设置——需要 CDN 加速/缓存控制时，在 CDN 或反向代理层统一配置
-- `storage.endpoint` 必须是**浏览器可达的地址**（公网域名或反代后的地址）；换地址 = 站点设置改一项 + 历史直链失效需一次性迁移，这是直链模式的已知代价
+- `blog.storage.endpoint` 必须是**浏览器可达的地址**（公网域名或反代后的地址）；换地址 = 改 `BLOG_STORAGE_ENDPOINT` 环境变量并重启 + 历史直链失效需一次性迁移，这是直链模式的已知代价
 - 将来需要权限控制的文件走**独立隐私桶**（匿名不可读，读取由业务接口现签预签名 URL）
 
-**存储配置统一在后台「站点设置」在线完成**（`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl`），保存即时生效、重启不丢。S3 客户端按配置元组惰性构建，配置变更后自动重建；应用不再对桶做任何管理操作。连接信息不完整时应用正常启动，仅上传报「配置不完整」。
+**存储配置在 yml/环境变量**（`blog.storage`：`endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl`，生产见 `application-prod.yml` 的 `BLOG_STORAGE_*` 环境变量，本地在 `local/application-local.yml`），S3 客户端随 Bean 一次性构建，改配置 = 改 env 重启。缺项或格式错误启动即失败（fail fast）；应用不对桶做任何管理操作。
 
 **内容寻址（无状态，无文件表）**：对象 key = `{md5}.{ext}`（桶根直存，前端算好 md5 随申请带上）——**key 本身就是内容的指纹**，秒传查询就是对这个地址发一次 HEAD：命中即说明同内容已上传，直接返回直链。查询（check）与凭证签发（presign/init）是两个独立接口，由前端编排。文件状态（对象、分片会话）全部由 RustFS 自持，业务库不记录任何文件信息，发布时仅校验引用为合法直链。代价：无归属校验（持有直链即持有文件）、无台账，中断的分片会话与未引用对象由运营侧扫桶处置。
 
@@ -163,7 +163,7 @@
 docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 ```
 
-然后启动后登录后台「站点设置」填入 `http://localhost:9000` / `rustfsadmin` / `rustfsadmin` / `forever`。桶 `forever` 需自行在控制台 `http://localhost:9001` 创建并设为公开读（匿名可读），应用不再代劳。
+然后在 `local/application-local.yml` 的 `blog.storage` 填入 endpoint `http://localhost:9000`、账密 `rustfsadmin` / `rustfsadmin`、桶 `forever`（模板已预置），重启应用即生效。桶 `forever` 需自行在控制台 `http://localhost:9001` 创建并设为公开读（匿名可读），应用不再代劳。
 
 > 前端直连预签名地址（跨域 XHR）时需在 RustFS 控制台为桶开启 CORS；`<img>`/`<video>` 标签加载不受影响。
 
@@ -198,9 +198,8 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 - **站点**：`site.url`（文章前台链接与 RSS 用）、`site.name`、`site.birth-date`（页脚运行时长）、`board.title` / `board.summary`
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 - **动态**：`moments.amapKey`（高德逆地理）
-- **存储**：`storage.endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl` / `public-read`（见 storage 模块）
 
-> 密钥类配置（access-key / secret-key / api-key / mail.password）的更新日志自动脱敏为 `***`，不会明文写入日志文件。
+> 密钥类配置（ai.api-key / mail.password）的更新日志自动脱敏为 `***`，不会明文写入日志文件。文件存储（storage）不在站点设置里，配置见「文件存储（storage）」节的 yml/环境变量。
 
 ## 审计日志（actionlog）
 
@@ -257,13 +256,15 @@ mvn spring-boot:run
 |---|---|
 | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | 数据源 |
 | `BLOG_ADMIN_PASSWORD` | 初始管理员密码（仅首次启动建号用） |
+| `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
+| `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |
 
-激活方式：`--spring.profiles.active=prod`。文件存储等运行参数不走环境变量，启动后登录后台「站点设置」配置。
+激活方式：`--spring.profiles.active=prod`。
 
 ## 常用开发说明
 
 - 数据库变更一律走 Flyway 迁移脚本（`src/main/resources/db/migration/`），禁止手改已合并的脚本
-- 运行参数（评论策略、站点地址、文件存储、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期必要项（初始管理员）
+- 运行参数（评论策略、站点地址、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期配置（初始管理员、文件存储）
 - 后台新接口必须声明 `@Perm`（裸 `@Perm` = 仅需登录），否则该接口一律 403；权限码由启动扫描自动登记
 - 本地日志输出到 `logs/forever-server.log`（已在 .gitignore 中）
 - 定时任务（RSS 抓取）默认每 6 小时一次，可通过 `blog.rss.fetch-interval-ms` 等配置覆盖

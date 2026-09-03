@@ -5,15 +5,15 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import java.time.Duration;
 
 /**
- * 文件存储内置默认值：仓库与 yml 不再预置存储配置，生效值统一在后台「站点设置」配置
- * （sys_site_config 的 storage.*，实时调整）——见 {@link StorageSettings}；
- * 本类仅承载未配置时的回落默认值，blog.storage.* 前缀保留可绑定，供个别环境需要时自行覆盖。
+ * 文件存储配置（RustFS，S3 兼容）：yml 是唯一来源（blog.storage.*），
+ * 生产由环境变量注入（application-prod.yml），本地开发在 local/application-local.yml；
+ * 启动时构建一次客户端，改配置 = 改 env 重启。
  *
- * @param endpoint   对象存储的 S3 API 地址（默认端口 9000），如 http://127.0.0.1:9000；无内置值。
- *                   必须为浏览器可达的公网地址——文件读取直接走该直链，不经应用
- * @param accessKey  访问密钥；无内置值
- * @param secretKey  秘密密钥；无内置值
- * @param bucket     存储桶名（公开桶），缺失时首次使用自动创建；无内置值
+ * @param endpoint   对象存储 S3 API 地址（默认端口 9000），如 https://s3.example.com；
+ *                   必须为浏览器可达的公网地址——文件读取走直链、预签名上传 URL 也由浏览器直连
+ * @param accessKey  访问密钥
+ * @param secretKey  秘密密钥
+ * @param bucket     存储桶名；须已建好并设为公开读，应用不代管桶
  * @param presignTtl 预签名 URL 有效期（直传 PUT 与分片共用，默认 15 分钟）
  */
 @ConfigurationProperties(prefix = "blog.storage")
@@ -22,5 +22,22 @@ public record StorageProperties(String endpoint, String accessKey, String secret
 
     public StorageProperties {
         presignTtl = presignTtl == null ? Duration.ofMinutes(15) : presignTtl;
+    }
+
+    /**
+     * 启动期校验（由 RustFsStorageService 构造时调用）：缺项或格式错误直接启动失败
+     */
+    public void validate() {
+        if (isBlank(endpoint) || isBlank(accessKey) || isBlank(secretKey) || isBlank(bucket)) {
+            throw new IllegalStateException(
+                    "文件存储配置不完整（blog.storage）：endpoint / access-key / secret-key / bucket 均必填");
+        }
+        if (!endpoint.startsWith("http://") && !endpoint.startsWith("https://")) {
+            throw new IllegalStateException("blog.storage.endpoint 必须以 http:// 或 https:// 开头：" + endpoint);
+        }
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 }

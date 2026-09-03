@@ -6,9 +6,18 @@ blog:
     username: ${BLOG_ADMIN_USERNAME:admin}
     # 生产环境密码不落盘，由 AdminInitializer 首次启动时读取（缺失则初始化失败）
     password: ${BLOG_ADMIN_PASSWORD}
+  # 文件存储（RustFS，S3 兼容）：endpoint 复用 S3 公网域名（预签名 URL 由浏览器直连，
+  # 故后端也走公网 endpoint 而非容器内网，见 docker-compose.yml rustfs-s3 路由注释）；
+  # 缺项启动即失败（blog.storage 由 RustFsStorageService 构造时校验）
+  storage:
+    endpoint: ${BLOG_STORAGE_ENDPOINT:?}
+    access-key: ${BLOG_STORAGE_ACCESS_KEY:?}
+    secret-key: ${BLOG_STORAGE_SECRET_KEY:?}
+    bucket: ${BLOG_STORAGE_BUCKET:?}
+    # 预签名 URL 有效期（直传 PUT 与分片共用），默认 15m
+    presign-ttl: ${BLOG_STORAGE_PRESIGN_TTL:15m}
 
-# 评论策略、站点地址、文件存储（storage.*）等运行参数均在后台「站点设置」（PUT /api/admin/settings）
-# 在线调整、即时生效；文件存储在后台配置完成后上传/下载才可用，未配置仅影响该功能、应用正常启动
+# 评论策略、站点地址等运行参数在后台「站点设置」（PUT /api/admin/settings）在线调整、即时生效
 
 springdoc:
   api-docs:

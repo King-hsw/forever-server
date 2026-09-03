@@ -28,6 +28,6 @@ blog:
 
 # 日志级别与输出在 logback-spring.xml 中统一维护
 
-# 说明：blog.* 仅保留启动期必要项（admin，见 local/application-local.yml）；
-# 评论策略、站点地址、文件存储（storage.*）等运行参数由后台「站点设置」管理：GET/PUT /api/admin/settings，
+# 说明：blog.* 为启动期配置（admin 见 local/application-local.yml，storage 见 application-prod.yml）；
+# 评论策略、站点地址等运行参数由后台「站点设置」管理：GET/PUT /api/admin/settings，
 # 修改即时生效、重启不丢
