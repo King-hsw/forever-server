@@ -177,12 +177,9 @@ CREATE TABLE sys_role_permission (
 INSERT INTO sys_role (code, name, remark, built_in) VALUES
     ('ADMIN', '管理员', '站长，拥有全部权限', true);
 
--- 内置权限点（端点级权限码由 PermissionAutoRegistrar 启动时自动注册，不在此播种）
+-- 内置权限点：仅固定 moment:post 的展示名/分组；其余端点级权限码由 PermissionAutoRegistrar 启动时自动注册，不在此播种
 INSERT INTO sys_permission (code, name, module) VALUES
-    ('admin:access',  '后台访问',   '系统'),
-    ('moment:post',   '发表朋友圈', '朋友圈'),
-    ('store:access',  '书城访问',   '书城'),
-    ('store:manage',  '书城管理',   '书城');
+    ('moment:post', '发表朋友圈', '朋友圈');
 
 -- 默认授权：ADMIN 持有全部权限点
 INSERT INTO sys_role_permission (role_id, permission_id)

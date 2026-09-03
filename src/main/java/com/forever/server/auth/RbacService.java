@@ -24,7 +24,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class RbacService {
 
-    public static final String PERM_ADMIN_ACCESS = "admin:access";
     public static final String STATUS_ACTIVE = "ACTIVE";
     public static final String STATUS_DISABLED = "DISABLED";
 
