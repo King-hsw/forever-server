@@ -137,7 +137,7 @@
 
 > 以上接口统一需要 `upload:upload` 权限码（启动时自动注册，RBAC 分配）——上传是独立模块能力，不随登录自动放行。
 
-要点：媒体白名单（图片 jpg/png/webp/gif ≤5MB、音频 mp3/m4a/wav ≤20MB、视频 mp4/webm ≤100MB），Content-Type 校验与扩展名映射共用一张表；媒体 JSON（images/audio/video）随动态存取；地点文本经高德逆地理（`moments.amapKey`）；时间线批量组装作者/评论数避免 N+1。
+要点：媒体白名单（图片 jpg/png/webp/gif ≤5MB、音频 mp3/m4a/wav ≤20MB、视频 mp4/webm ≤100MB），Content-Type 校验与扩展名映射共用一张表；媒体 JSON（images/audio/video）随动态存取；地点文本经高德逆地理（`AmapService`，key 在 yml `blog.moments.amap.key`，未配静默降级）；时间线批量组装作者/评论数避免 N+1。
 
 ## 文件存储（storage）
 
@@ -197,7 +197,6 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 - **邮件 SMTP**：`mail.host`（必填，留空 = 未配置不发信）、`mail.port`（默认 465）、`mail.username` / `mail.password`、`mail.ssl`（默认 true；false 走 587 STARTTLS）
 - **站点**：`site.url`（文章前台链接与 RSS 用）、`site.name`、`site.birth-date`（页脚运行时长）、`board.title` / `board.summary`
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
-- **动态**：`moments.amapKey`（高德逆地理）
 
 > 密钥类配置（ai.api-key / mail.password）的更新日志自动脱敏为 `***`，不会明文写入日志文件。文件存储（storage）不在站点设置里，配置见「文件存储（storage）」节的 yml/环境变量。
 
@@ -258,6 +257,7 @@ mvn spring-boot:run
 | `BLOG_ADMIN_PASSWORD` | 初始管理员密码（仅首次启动建号用） |
 | `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
 | `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |
+| `BLOG_MOMENTS_AMAP_KEY` | 高德 Web Service key（动态页「获取当前位置」逆地理），可选，留空 = 功能关闭 |
 
 激活方式：`--spring.profiles.active=prod`。
 

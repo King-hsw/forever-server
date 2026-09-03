@@ -98,10 +98,6 @@ public class SiteConfigService {
      * 模型名（如 gpt-4o-mini / deepseek-chat）
      */
     public static final String AI_MODEL = "ai.model";
-    /**
-     * 高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null）
-     */
-    public static final String MOMENTS_AMAP_KEY = "moments.amapKey";
 
     /**
      * 已知配置项元数据：key -> 中文说明（新增可调参数在这里登记）
@@ -125,8 +121,7 @@ public class SiteConfigService {
             Map.entry(AI_SUMMARY_ENABLED, "AI 文章概要总开关（true/false），还需配置 ai.api-key 才生效"),
             Map.entry(AI_API_KEY, "AI 服务的 API Key（OpenAI 兼容接口）"),
             Map.entry(AI_BASE_URL, "AI 服务地址（API 根地址，不含 /v1；Spring AI 自动补 /v1/chat/completions；OpenAI 官方即 https://api.openai.com，DeepSeek 即 https://api.deepseek.com）"),
-            Map.entry(AI_MODEL, "AI 模型名（如 gpt-4o-mini / deepseek-chat，默认 gpt-4o-mini）"),
-            Map.entry(MOMENTS_AMAP_KEY, "高德 Web 服务 API Key（动态地点逆地理，未配置则逆地理返回 null）")
+            Map.entry(AI_MODEL, "AI 模型名（如 gpt-4o-mini / deepseek-chat，默认 gpt-4o-mini）")
     );
 
     private final SiteConfigMapper mapper;

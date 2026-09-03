@@ -31,6 +31,7 @@ public class PublicMomentController {
 
     private final MomentService momentService;
     private final CommentService commentService;
+    private final AmapService amapService;
 
     @Operation(summary = "分页查看动态", description = "created_at 倒序；user 可选，只查该用户的动态；canDelete 按当前登录态计算")
     @GetMapping("/api/v1/moments")
@@ -49,7 +50,8 @@ public class PublicMomentController {
     public ApiResponse<MomentDtos.GeocodeResponse> geocode(
             @Parameter(description = "纬度") @RequestParam(required = false) Double lat,
             @Parameter(description = "经度") @RequestParam(required = false) Double lng) {
-        return ApiResponse.ok(momentService.geocode(lat, lng));
+        return ApiResponse.ok(new MomentDtos.GeocodeResponse(
+                lat == null || lng == null ? null : amapService.regeoText(lat, lng)));
     }
 
     @Operation(summary = "分页查看动态评论", description = "两层楼结构同文章/留言板评论；仅返回已过审评论")

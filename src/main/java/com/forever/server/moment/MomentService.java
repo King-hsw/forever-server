@@ -12,29 +12,22 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
-import com.forever.server.setting.SiteConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
-import java.net.URI;
-import java.net.URLEncoder;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
-import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 动态（朋友圈）：公开时间线、发布/删除（作者或 ADMIN）、高德逆地理。
+ * 动态（朋友圈）：公开时间线、发布/删除（作者或 ADMIN）。
  * 媒体引用为前端直传得到的 RustFS 直链，发布时仅做 http(s) 格式校验——
  * 文件状态由存储自持，业务库不记录。
- * 评论复用评论模块（target_type = MOMENT，见 {@link CommentService}）。
+ * 评论复用评论模块（target_type = MOMENT，见 {@link CommentService}）；
+ * 地点逆地理是第三方调用，见 {@link AmapService}。
  */
 @Slf4j
 @Service
@@ -44,15 +37,10 @@ public class MomentService {
     static final int MAX_IMAGES = 9;
     static final String MOMENT_TARGET = CommentService.TARGET_MOMENT;
 
-    private static final HttpClient GEOCODE_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(5))
-            .build();
-
     private final MomentMapper momentMapper;
     private final SysUserMapper sysUserMapper;
     private final CommentMapper commentMapper;
     private final RbacService rbacService;
-    private final SiteConfigService siteConfig;
     /** 仅用于 media JSON 存取，Spring Boot 4 自动装配的 Jackson 3（tools.jackson） */
     private final ObjectMapper objectMapper;
 
@@ -147,52 +135,6 @@ public class MomentService {
         momentMapper.deleteById(id);
         commentMapper.deleteByTarget(MOMENT_TARGET, id);
         log.info("moment deleted: id={}, by={}", id, uid);
-    }
-
-    /**
-     * 高德 Web Service 逆地理（裸 HTTP，不加依赖）；
-     * 未配置 key / 参数缺失 / 网络或高德报错一律静默返回 text=null。
-     */
-    public MomentDtos.GeocodeResponse geocode(Double lat, Double lng) {
-        String key = siteConfig.getString(SiteConfigService.MOMENTS_AMAP_KEY, null);
-        if (key == null || lat == null || lng == null) {
-            return new MomentDtos.GeocodeResponse(null);
-        }
-        try {
-            String url = "https://restapi.amap.com/v3/geocode/regeo?extensions=base"
-                    + "&key=" + URLEncoder.encode(key, StandardCharsets.UTF_8)
-                    + "&location=" + lng + "," + lat;
-            HttpResponse<String> resp = GEOCODE_CLIENT.send(
-                    HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofSeconds(5)).GET().build(),
-                    HttpResponse.BodyHandlers.ofString());
-            JsonNode root = objectMapper.readTree(resp.body());
-            if (!"1".equals(root.path("status").asText())) {
-                // 高德业务失败（配额超限/参数问题等），info 字段带原因；对前端表现为无地点
-                log.debug("amap regeo rejected: info={}", root.path("info").asText());
-                return new MomentDtos.GeocodeResponse(null);
-            }
-            JsonNode comp = root.path("regeocode").path("addressComponent");
-            String city = cityText(comp.path("city"));
-            String district = comp.path("district").asText("");
-            String text = district.isEmpty() || district.equals(city) ? city : city + district;
-            return new MomentDtos.GeocodeResponse(Strings.blankToNull(text));
-        } catch (Exception e) {
-            log.warn("高德逆地理调用失败: {}", e.toString());
-            return new MomentDtos.GeocodeResponse(null);
-        }
-    }
-
-    /**
-     * Amap 直辖市 city 为数组（如 ["北京市"]），普通城市为字符串
-     */
-    private static String cityText(JsonNode city) {
-        if (city.isTextual()) {
-            return city.asText().trim();
-        }
-        if (city.isArray() && !city.isEmpty()) {
-            return city.get(0).asText().trim();
-        }
-        return "";
     }
 
     private Moment requireExists(Long id) {

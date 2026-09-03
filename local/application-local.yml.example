@@ -20,6 +20,10 @@ blog:
     access-key: rustfsadmin
     secret-key: rustfsadmin
     bucket: forever
+  # 高德 Web Service key（动态页「获取当前位置」）；留空 = 功能关闭
+  moments:
+    amap:
+      key: <高德 Web 服务 key，可留空>
 
 # 注意：评论策略（限流间隔/先审后显/邮件通知/收件人）与站点地址等运行参数，
 # 在启动后登录后台「站点设置」在线调整（存 sys_site_config 表，立即生效、重启不丢），
