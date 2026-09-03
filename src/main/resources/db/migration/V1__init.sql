@@ -177,13 +177,7 @@ CREATE TABLE sys_role_permission (
 INSERT INTO sys_role (code, name, remark, built_in) VALUES
     ('ADMIN', '管理员', '站长，拥有全部权限', true);
 
--- 内置权限点：仅固定 moment:post 的展示名/分组；其余端点级权限码由 PermissionAutoRegistrar 启动时自动注册，不在此播种
-INSERT INTO sys_permission (code, name, module) VALUES
-    ('moment:post', '发表朋友圈', '朋友圈');
-
--- 默认授权：ADMIN 持有全部权限点
-INSERT INTO sys_role_permission (role_id, permission_id)
-SELECT r.id, p.id FROM sys_role r JOIN sys_permission p ON r.code = 'ADMIN';
+-- 权限点不在此播种：启动时 PermissionAutoRegistrar 扫描全部 @Perm，幂等补 sys_permission 行并授予 ADMIN 角色
 
 -- 登录态双 Token（不透明随机串，落库可吊销）：只存 SHA-256 哈希，删行即登出
 CREATE TABLE sys_auth_token (
