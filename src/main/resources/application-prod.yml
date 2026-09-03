@@ -6,12 +6,11 @@ blog:
     username: ${BLOG_ADMIN_USERNAME:admin}
     # 生产环境密码不落盘，由 AdminInitializer 首次启动时读取（缺失则初始化失败）
     password: ${BLOG_ADMIN_PASSWORD}
-  # 文件存储（RustFS，S3 兼容）：公网 endpoint 供浏览器直连（预签名/直链）；
-  # 后端自身 S3 API 调用走 internal-endpoint（不经 CDN——CDN 回源剥 x-amz-* 签名头，
-  # header 签名请求过 CDN 必 403；未配置时回退公网 endpoint）；缺项启动即失败
+  # 文件存储（RustFS，S3 兼容）：endpoint 复用 S3 公网域名（预签名 URL 由浏览器直连，
+  # 故后端也走公网 endpoint 而非容器内网，见 docker-compose.yml rustfs-s3 路由注释）；
+  # 缺项启动即失败（blog.storage 由 RustFsStorageService 构造时校验）
   storage:
     endpoint: ${BLOG_STORAGE_ENDPOINT:?}
-    internal-endpoint: ${BLOG_STORAGE_INTERNAL_ENDPOINT:}
     access-key: ${BLOG_STORAGE_ACCESS_KEY:?}
     secret-key: ${BLOG_STORAGE_SECRET_KEY:?}
     bucket: ${BLOG_STORAGE_BUCKET:?}
