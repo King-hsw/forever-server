@@ -24,6 +24,9 @@ import java.util.List;
  * 文件存取（S3 兼容对象存储 RustFS，AWS SDK v2 接入，见 docs.rustfs.com/zh/developer/sdk/java）。
  * 相对路径即对象 key；前端与数据库一律使用 RustFS 直链（{endpoint}/{bucket}/{key}），
  * 由 {@link #directUrlOf} 拼出。
+ * 两个端点各司其职（见 {@link StorageProperties#internalEndpoint()}）：
+ * 后端自身 API 调用（stat/multipart/save/delete）走 internalEndpoint（不经 CDN，
+ * CDN 回源剥 x-amz-* 签名头会让 header 签名请求必 403）；预签名 URL 与直链固定用公网 endpoint。
  * path-style + us-east-1 是 RustFS 的固定要求。配置在 yml（见 {@link StorageProperties}），
  * 客户端随 Bean 一次性构建。应用只读写对象，不碰桶：建桶与桶策略（公开/私有）由运营在 RustFS 控制台处置。
  */
@@ -51,11 +54,15 @@ public class RustFsStorageService {
         // 配置缺项/格式错直接启动失败（fail fast）
         props.validate();
         this.props = props;
-        log.info("构建 RustFS 客户端: endpoint={}, bucket={}", props.endpoint(), props.bucket());
+        // 后端 API 调用走内网端点（未配置时回退公网端点）；预签名/直链用公网端点，见类注释
+        String apiEndpoint = props.internalEndpoint() == null || props.internalEndpoint().isBlank()
+                ? props.endpoint() : props.internalEndpoint();
+        log.info("构建 RustFS 客户端: apiEndpoint={}, 公网 endpoint={}, bucket={}",
+                apiEndpoint, props.endpoint(), props.bucket());
         StaticCredentialsProvider credentials = StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(props.accessKey(), props.secretKey()));
         this.s3 = S3Client.builder()
-                .endpointOverride(URI.create(props.endpoint()))
+                .endpointOverride(URI.create(apiEndpoint))
                 // RustFS 文档固定要求 us-east-1，配合 path-style 避免 301 Moved Permanently
                 .region(Region.US_EAST_1)
                 .credentialsProvider(credentials)
