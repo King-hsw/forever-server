@@ -1,7 +1,8 @@
 package com.forever.server.moment;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 import com.forever.server.auth.RbacService;
 import com.forever.server.auth.SysUser;
 import com.forever.server.auth.SysUserMapper;
@@ -16,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URLEncoder;
@@ -53,10 +53,8 @@ public class MomentService {
     private final CommentMapper commentMapper;
     private final RbacService rbacService;
     private final SiteConfigService siteConfig;
-    /**
-     * 仅用于 media JSON 存取；Spring Boot 4 自动装配的是 Jackson 3，这里用 classpath 自带的 Jackson 2
-     */
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    /** 仅用于 media JSON 存取，Spring Boot 4 自动装配的 Jackson 3（tools.jackson） */
+    private final ObjectMapper objectMapper;
 
     // ---------- 公开端 ----------
 
@@ -212,7 +210,7 @@ public class MomentService {
         try {
             MomentMedia media = objectMapper.readValue(json, MomentMedia.class);
             return media == null ? new MomentMedia(List.of(), null, null) : media;
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             log.warn("动态媒体 JSON 解析失败: {}", json);
             return new MomentMedia(List.of(), null, null);
         }
@@ -221,7 +219,7 @@ public class MomentService {
     private String writeMedia(MomentMedia media) {
         try {
             return objectMapper.writeValueAsString(media);
-        } catch (IOException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("序列化媒体 JSON 失败", e);
         }
     }
