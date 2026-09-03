@@ -9,11 +9,13 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import nl.martijndwars.webpush.Encoding;
 import nl.martijndwars.webpush.Notification;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.security.GeneralSecurityException;
+import java.security.Security;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -24,6 +26,15 @@ import java.util.List;
  */
 @Service
 public class PushService {
+
+    /**
+     * web-push 5.x 内部 KeyFactory.getInstance("ECDH", "BC") 依赖 BC provider，但库自身不注册；
+     * 不注册则 VAPID 初始化抛 NoSuchProviderException（GeneralSecurityException 子类），
+     * 会被误报成「密钥格式非法」。重复 addProvider 仅返回 false，安全
+     */
+    static {
+        Security.addProvider(new BouncyCastleProvider());
+    }
 
     private static final Logger log = LoggerFactory.getLogger(PushService.class);
 
