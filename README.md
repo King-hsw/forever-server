@@ -147,7 +147,7 @@
 - `blog.storage.endpoint` 必须是**浏览器可达的地址**（公网域名或反代后的地址）；换地址 = 改 `BLOG_STORAGE_ENDPOINT` 环境变量并重启 + 历史直链失效需一次性迁移，这是直链模式的已知代价
 - 将来需要权限控制的文件走**独立隐私桶**（匿名不可读，读取由业务接口现签预签名 URL）
 
-**存储配置在 yml/环境变量**（`blog.storage`：`endpoint` / `access-key` / `secret-key` / `bucket` / `presign-ttl`，生产见 `application-prod.yml` 的 `BLOG_STORAGE_*` 环境变量，本地在 `local/application-local.yml`），S3 客户端随 Bean 一次性构建，改配置 = 改 env 重启。缺项或格式错误启动即失败（fail fast）；应用不对桶做任何管理操作。
+**存储配置在 yml/环境变量**（`blog.storage`：`endpoint` / `public-base-url` / `access-key` / `secret-key` / `bucket` / `presign-ttl`，生产见 `application-prod.yml` 的 `BLOG_STORAGE_*` 环境变量，本地在 `local/application-local.yml`），S3 客户端随 Bean 一次性构建，改配置 = 改 env 重启。缺项或格式错误启动即失败（fail fast）；应用不对桶做任何管理操作。
 
 **内容寻址（无状态，无文件表）**：对象 key = `{md5}.{ext}`（桶根直存，前端算好 md5 随申请带上）——**key 本身就是内容的指纹**，秒传查询就是对这个地址发一次 HEAD：命中即说明同内容已上传，直接返回直链。查询（check）与凭证签发（presign/init）是两个独立接口，由前端编排。文件状态（对象、分片会话）全部由 RustFS 自持，业务库不记录任何文件信息，发布时仅校验引用为合法直链。代价：无归属校验（持有直链即持有文件）、无台账，中断的分片会话与未引用对象由运营侧扫桶处置。
 
@@ -256,6 +256,7 @@ mvn spring-boot:run
 | `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | 数据源 |
 | `BLOG_ADMIN_PASSWORD` | 初始管理员密码（仅首次启动建号用） |
 | `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
+| `BLOG_STORAGE_PUBLIC_BASE_URL` | 对象公开直链域名（CDN），可选，留空用 endpoint |
 | `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |
 | `BLOG_MOMENTS_AMAP_KEY` | 高德 Web Service key（动态页「获取当前位置」逆地理），可选，留空 = 功能关闭 |
 

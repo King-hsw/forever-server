@@ -22,8 +22,8 @@ import java.util.List;
 
 /**
  * 文件存取（S3 兼容对象存储 RustFS，AWS SDK v2 接入，见 docs.rustfs.com/zh/developer/sdk/java）。
- * 相对路径即对象 key；前端与数据库一律使用 RustFS 直链（{endpoint}/{bucket}/{key}），
- * 由 {@link #directUrlOf} 拼出。
+ * 相对路径即对象 key；前端与数据库一律使用 RustFS 直链（{publicBaseUrl}/{bucket}/{key}，
+ * publicBaseUrl 留空回退 endpoint），由 {@link #directUrlOf} 拼出。
  * path-style + us-east-1 是 RustFS 的固定要求。配置在 yml（见 {@link StorageProperties}），
  * 客户端随 Bean 一次性构建。应用只读写对象，不碰桶：建桶与桶策略（公开/私有）由运营在 RustFS 控制台处置。
  */
@@ -127,10 +127,12 @@ public class RustFsStorageService {
     }
 
     /**
-     * 对象公网直链：{endpoint}/{bucket}/{key}
+     * 对象公网直链：{publicBaseUrl}/{bucket}/{key}（publicBaseUrl 留空回退 endpoint）
      */
     public String directUrlOf(String key) {
-        return props.endpoint().replaceAll("/+$", "") + "/" + props.bucket() + "/" + key;
+        String base = props.publicBaseUrl() == null || props.publicBaseUrl().isBlank()
+                ? props.endpoint() : props.publicBaseUrl();
+        return base.replaceAll("/+$", "") + "/" + props.bucket() + "/" + key;
     }
 
     /**

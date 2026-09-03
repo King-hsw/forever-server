@@ -11,6 +11,8 @@ blog:
   # 缺项启动即失败（blog.storage 由 RustFsStorageService 构造时校验）
   storage:
     endpoint: ${BLOG_STORAGE_ENDPOINT:?}
+    # 公开直链域名（CDN），留空用 endpoint
+    public-base-url: ${BLOG_STORAGE_PUBLIC_BASE_URL:}
     access-key: ${BLOG_STORAGE_ACCESS_KEY:?}
     secret-key: ${BLOG_STORAGE_SECRET_KEY:?}
     bucket: ${BLOG_STORAGE_BUCKET:?}

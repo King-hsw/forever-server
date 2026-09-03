@@ -20,6 +20,7 @@ blog:
     access-key: rustfsadmin
     secret-key: rustfsadmin
     bucket: forever
+    # public-base-url: <公开直链域名（CDN），留空用 endpoint>
   # 高德 Web Service key（动态页「获取当前位置」）；留空 = 功能关闭
   moments:
     amap:
