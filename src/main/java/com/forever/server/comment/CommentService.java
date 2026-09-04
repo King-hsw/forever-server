@@ -9,6 +9,7 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Strings;
+import com.forever.server.moment.Moment;
 import com.forever.server.moment.MomentMapper;
 import com.forever.server.sensitive.SensitiveWordService;
 import com.forever.server.setting.SiteConfigService;
@@ -158,11 +159,13 @@ public class CommentService {
      * 发表动态评论：登录用户（viewerUid 非空）自动以其 sys_user 资料身份发布，邮箱可为空
      */
     public CommentAdminResponse createMoment(Long momentId, Long viewerUid, CommentCreateRequest request, String ip) {
-        if (momentMapper.findById(momentId) == null) {
+        Moment moment = momentMapper.findById(momentId);
+        if (moment == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "动态不存在");
         }
         Identity identity = viewerUid != null ? userIdentity(viewerUid) : visitorIdentity(request);
-        return doCreate(TARGET_MOMENT, momentId, "动态 #" + momentId, "/moments",
+        // 来源标题用动态内容摘录（取代「动态 #id」），邮件/推送/收件箱三处同时受益
+        return doCreate(TARGET_MOMENT, momentId, Strings.excerpt(moment.getContent(), 20), "/moments",
                 request, ip, identity);
     }
 
