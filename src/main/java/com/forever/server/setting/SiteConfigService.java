@@ -39,10 +39,6 @@ public class SiteConfigService {
      */
     public static final String SITE_URL = "site.url";
     /**
-     * 站点名称，用于 RSS 与邮件发件人等对外署名
-     */
-    public static final String SITE_NAME = "site.name";
-    /**
      * 建站日期（yyyy-MM-dd），前台页脚据此计算运行时长
      */
     public static final String SITE_BIRTH_DATE = "site.birth-date";
@@ -72,7 +68,6 @@ public class SiteConfigService {
             Map.entry(COMMENT_NOTIFY_MAIL, "是否开启评论邮件通知（true/false）"),
             Map.entry(COMMENT_OWNER_EMAIL, "新根评论通知站长的邮箱"),
             Map.entry(SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）"),
-            Map.entry(SITE_NAME, "站点名称（用于 RSS 标题与邮件发件人等对外署名）"),
             Map.entry(SITE_BIRTH_DATE, "建站日期，格式 yyyy-MM-dd（前台页脚据此计算运行时长）"),
             Map.entry(AI_SUMMARY_ENABLED, "AI 文章概要总开关（true/false），还需配置 ai.api-key 才生效"),
             Map.entry(AI_API_KEY, "AI 服务的 API Key（OpenAI 兼容接口）"),
@@ -148,13 +143,6 @@ public class SiteConfigService {
         return KNOWN_KEYS.entrySet().stream()
                 .map(e -> new SettingDtos.SettingResponse(e.getKey(), cache.get(e.getKey()), e.getValue()))
                 .toList();
-    }
-
-    /**
-     * 站点名称；未设置时用内置默认值
-     */
-    public String siteName() {
-        return getString(SITE_NAME, "补陋阁");
     }
 
     // ---------- AI 概要 ----------

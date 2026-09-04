@@ -7,7 +7,7 @@ import com.rometools.rome.feed.synd.*;
 import com.rometools.rome.io.SyndFeedOutput;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,13 +23,20 @@ import java.util.List;
  */
 @Tag(name = "RSS·本站输出", description = "对外提供本站文章的 RSS 订阅源")
 @RestController
-@RequiredArgsConstructor
 public class SiteFeedController {
 
     private static final int FEED_SIZE = 20;
 
     private final ArticleMapper articleMapper;
     private final SiteConfigService siteConfig;
+    private final String siteName;
+
+    public SiteFeedController(ArticleMapper articleMapper, SiteConfigService siteConfig,
+                              @Value("${blog.site.name}") String siteName) {
+        this.articleMapper = articleMapper;
+        this.siteConfig = siteConfig;
+        this.siteName = siteName;
+    }
 
     @Operation(summary = "本站 RSS 订阅源", description = "RSS 2.0 格式，返回最新 20 篇已发布文章；" +
             "文章链接基于后台站点设置 site.url 拼接")
@@ -37,8 +44,6 @@ public class SiteFeedController {
     @GetMapping(value = {"/rss", "/rss.xml"}, produces = MediaType.APPLICATION_RSS_XML_VALUE)
     public ResponseEntity<String> rss() throws com.rometools.rome.io.FeedException {
         String siteUrl = trimTrailingSlash(siteConfig.getString(SiteConfigService.SITE_URL, ""));
-
-        String siteName = siteConfig.siteName();
 
         SyndFeed feed = new SyndFeedImpl();
         feed.setFeedType("rss_2.0");

@@ -35,6 +35,9 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 blog:
+  site:
+    # 站点名称（邮件 From 显示名、RSS 标题等对外署名；必填）
+    name: ${BLOG_SITE_NAME:?}
   mail:
     # 启动测试邮件收件人（必填）：服务启动即发一封，验证 SMTP 链路，失败只记日志不阻塞启动
     test-to: ${BLOG_MAIL_TO:?}
