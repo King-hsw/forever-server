@@ -175,8 +175,7 @@ public class CommentNotifyService {
      */
     private static String sourceTitleHtml(String sourceTitle, String viewUrl) {
         String text = MailService.escapeHtml("《" + sourceTitle + "》");
-        String inner = viewUrl == null
-                ? "<span style=\"color:#333333;\">" + text + "</span>"
+        String inner = viewUrl == null ? text
                 : "<a href=\"" + viewUrl + "\" style=\"color:#0d9488;text-decoration:none;\">" + text + "</a>";
         return "<div style=\"margin-bottom:12px;font-size:15px;font-weight:bold;\">" + inner + "</div>";
     }
