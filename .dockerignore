@@ -3,9 +3,6 @@
 .gitignore
 .idea
 
-# 构建产物（容器内重新构建）
-target
-
 # 本地私密配置与运行时产物，严禁进镜像
 local
 logs

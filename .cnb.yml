@@ -1,0 +1,24 @@
+# CNB 云原生构建：main 推送 → maven 打包 → 构建并推送 Docker 镜像
+# Dockerfile 是"只拷 jar"的运行镜像，jar 由本流水线的 mvn package 产出
+main:
+  push:
+    - docker:
+        # 构建环境：maven + JDK 25（与 pom java.version 一致）
+        image: maven:3.9-eclipse-temurin-25
+
+        volumes:
+          # maven 本地仓库缓存：同节点二次构建免重复下载依赖
+          - /root/.m2:copy-on-write
+      services:
+        # 流水线中启用 docker 服务
+        - docker
+      stages:
+        - name: mvn package
+          script: |
+            mvn -B package -DskipTests
+        - name: docker build
+          script:
+            - docker build -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} .
+        - name: docker push
+          script:
+            - docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
