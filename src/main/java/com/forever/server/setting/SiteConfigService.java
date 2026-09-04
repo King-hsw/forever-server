@@ -52,14 +52,6 @@ public class SiteConfigService {
      */
     public static final String SITE_BIRTH_DATE = "site.birth-date";
     /**
-     * 留言板标题
-     */
-    public static final String BOARD_TITLE = "board.title";
-    /**
-     * 留言板简介
-     */
-    public static final String BOARD_SUMMARY = "board.summary";
-    /**
      * AI 概要总开关；需同时配置 ai.api-key 才真正生效
      */
     public static final String AI_SUMMARY_ENABLED = "ai.summary-enabled";
@@ -88,8 +80,6 @@ public class SiteConfigService {
             Map.entry(SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）"),
             Map.entry(SITE_NAME, "站点名称（用于 RSS 标题与邮件发件人等对外署名）"),
             Map.entry(SITE_BIRTH_DATE, "建站日期，格式 yyyy-MM-dd（前台页脚据此计算运行时长）"),
-            Map.entry(BOARD_TITLE, "留言板标题"),
-            Map.entry(BOARD_SUMMARY, "留言板简介"),
             Map.entry(AI_SUMMARY_ENABLED, "AI 文章概要总开关（true/false），还需配置 ai.api-key 才生效"),
             Map.entry(AI_API_KEY, "AI 服务的 API Key（OpenAI 兼容接口）"),
             Map.entry(AI_BASE_URL, "AI 服务地址（API 根地址，不含 /v1；Spring AI 自动补 /v1/chat/completions；OpenAI 官方即 https://api.openai.com，DeepSeek 即 https://api.deepseek.com）"),
@@ -171,20 +161,6 @@ public class SiteConfigService {
      */
     public String siteName() {
         return getString(SITE_NAME, "补陋阁");
-    }
-
-    /**
-     * 留言板标题；未设置时用内置默认值
-     */
-    public String boardTitle() {
-        return getString(BOARD_TITLE, "留言板");
-    }
-
-    /**
-     * 留言板简介；未设置时用内置默认值
-     */
-    public String boardSummary() {
-        return getString(BOARD_SUMMARY, "对网站有任何建议、想法，或者只是想打个招呼，都欢迎在这里留言。");
     }
 
     // ---------- AI 概要 ----------

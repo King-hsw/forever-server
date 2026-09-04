@@ -4,14 +4,18 @@ import com.forever.server.common.ApiResponse;
 import com.forever.server.common.PageParams;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.Web;
-import com.forever.server.setting.SiteConfigService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 留言板。留言即 target_type=BOARD 的评论，
@@ -23,16 +27,6 @@ import org.springframework.web.bind.annotation.*;
 public class BoardController {
 
     private final CommentService commentService;
-    private final SiteConfigService siteConfig;
-
-    public record BoardInfo(String title, String summary) {
-    }
-
-    @Operation(summary = "留言板信息", description = "标题与简介来自后台站点设置 board.title / board.summary")
-    @GetMapping("/api/v1/board")
-    public ApiResponse<BoardInfo> info() {
-        return ApiResponse.ok(new BoardInfo(siteConfig.boardTitle(), siteConfig.boardSummary()));
-    }
 
     @Operation(summary = "分页查看留言", description = "两层楼结构同文章评论；仅返回已过审留言")
     @GetMapping("/api/v1/board/messages")

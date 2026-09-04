@@ -92,7 +92,7 @@
 | 接口 | 说明 |
 |---|---|
 | `GET /api/v1/articles/{id}/comments`、`POST /api/v1/comments` | 文章评论读/写（公开） |
-| `GET /api/v1/board`、`GET/POST /api/v1/board/messages` | 留言板信息与留言读/写（公开） |
+| `GET/POST /api/v1/board/messages` | 留言板留言读/写（公开） |
 | `GET/POST /api/v1/moments/{id}/comments` | 动态评论读/写（公开，见 moment 模块） |
 | `GET /api/admin/comments`、`PUT /{id}/approve`、`/{id}/reject`、`DELETE /{id}` | 审核与维护（`comment:list/approve/reject/delete`） |
 
@@ -194,7 +194,7 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 `GET /api/admin/settings`（`setting:list`）列出全部可调参数与中文说明，`PUT /api/admin/settings`（`setting:update`）按 key 更新（留空即清除、恢复默认值）：白名单 + 类型校验（布尔只收 true/false、邮箱/URL/日期格式、数值范围），落库 + 内存缓存双写，**即时生效、重启不丢**。SMTP 不在站点设置里，在 yml `spring.mail` / `BLOG_MAIL_*` 环境变量（见「部署」节）；**服务启动时自动向 `comment.owner-email` 发一封测试邮件**，验证 SMTP 可用，失败只记日志不阻塞启动。参数分组：
 
 - **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）、`comment.notify-mail`（邮件通知开关）、`comment.owner-email` / `comment.from-email`
-- **站点**：`site.url`（文章前台链接与 RSS 用）、`site.name`、`site.birth-date`（页脚运行时长）、`board.title` / `board.summary`
+- **站点**：`site.url`（文章前台链接与 RSS 用）、`site.name`、`site.birth-date`（页脚运行时长）
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 
 > 密钥类配置（ai.api-key）的更新日志自动脱敏为 `***`，不会明文写入日志文件。邮件 SMTP（`BLOG_MAIL_*`）与文件存储（storage）不在站点设置里，配置见 yml/环境变量。

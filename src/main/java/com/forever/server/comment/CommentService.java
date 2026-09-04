@@ -47,6 +47,14 @@ public class CommentService {
      */
     public static final String TARGET_MOMENT = "MOMENT";
 
+    /**
+     * 留言板标题与前台路径：已写死，不再走站点设置（board.title / board.summary 已移除）。
+     * 标题会出现在站内消息文案里（「《留言板》收到新评论」）；
+     * 前端 chat 页的聊天室标题与 SEO 标题也硬编码了同一个词，改这里要同步改前端。
+     */
+    private static final String BOARD_TITLE = "留言板";
+    private static final String BOARD_URL = "/chat";
+
     private final CommentMapper commentMapper;
     private final ArticleMapper articleMapper;
     private final MomentMapper momentMapper;
@@ -142,7 +150,7 @@ public class CommentService {
      * 发表留言板留言（不关联文章）
      */
     public CommentAdminResponse createBoard(CommentCreateRequest request, String ip) {
-        return doCreate(TARGET_BOARD, 0L, siteConfig.boardTitle(), "/chat",
+        return doCreate(TARGET_BOARD, 0L, BOARD_TITLE, BOARD_URL,
                 request, ip, visitorIdentity(request));
     }
 
