@@ -258,8 +258,8 @@ public class ArticleService {
      * 前台完整 URL，供机器消费方直接使用；未配置 blog.site.url 时返回 null
      */
     private String publicUrl(String slug) {
-        String base = siteUrl == null ? null : siteUrl.strip();
-        if (base == null || base.isBlank()) {
+        String base = siteUrl.strip();
+        if (base.isBlank()) {
             return null;
         }
         return (base.endsWith("/") ? base.substring(0, base.length() - 1) : base) + "/articles/" + slug;
