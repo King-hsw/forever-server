@@ -191,9 +191,9 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 
 ## 站点设置（setting）
 
-`GET /api/admin/settings`（`setting:list`）列出全部可调参数与中文说明，`PUT /api/admin/settings`（`setting:update`）按 key 更新（留空即清除、恢复默认值）：白名单 + 类型校验（布尔只收 true/false、邮箱/URL/日期格式、数值范围），落库 + 内存缓存双写，**即时生效、重启不丢**。SMTP 不在站点设置里，在 yml `spring.mail` / `BLOG_MAIL_*` 环境变量（见「部署」节）；**服务启动时自动向 `comment.owner-email` 发一封测试邮件**，验证 SMTP 可用，失败只记日志不阻塞启动。参数分组：
+`GET /api/admin/settings`（`setting:list`）列出全部可调参数与中文说明，`PUT /api/admin/settings`（`setting:update`）按 key 更新（留空即清除、恢复默认值）：白名单 + 类型校验（布尔只收 true/false、邮箱/URL/日期格式、数值范围），落库 + 内存缓存双写，**即时生效、重启不丢**。SMTP 不在站点设置里，在 yml `spring.mail` / `BLOG_MAIL_*` 环境变量（见「部署」节）；发件人固定为 SMTP 登录账号（`BLOG_MAIL_USERNAME`）；**服务启动时自动向 `BLOG_MAIL_TO` 发一封测试邮件**，验证 SMTP 可用，失败只记日志不阻塞启动。参数分组：
 
-- **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）、`comment.notify-mail`（邮件通知开关）、`comment.owner-email` / `comment.from-email`
+- **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）、`comment.notify-mail`（邮件通知开关）、`comment.owner-email`（新根评论通知站长的邮箱；邮件发件人固定为 SMTP 登录账号，不在站点设置里）
 - **站点**：`site.url`（文章前台链接与 RSS 用）、`site.name`、`site.birth-date`（页脚运行时长）
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 
@@ -255,7 +255,7 @@ mvn spring-boot:run
 |---|---|
 | `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | 数据源 |
 | `BLOG_ADMIN_USERNAME` / `BLOG_ADMIN_PASSWORD` | 初始管理员（仅首次启动建号用）；password 必填 |
-| `BLOG_MAIL_HOST` / `BLOG_MAIL_PORT` / `BLOG_MAIL_USERNAME` / `BLOG_MAIL_PASSWORD` / `BLOG_MAIL_TO` | 邮件 SMTP（评论通知）+ 启动测试邮件收件人，五项必填，缺失启动即失败（fail fast） |
+| `BLOG_MAIL_HOST` / `BLOG_MAIL_PORT` / `BLOG_MAIL_USERNAME` / `BLOG_MAIL_PASSWORD` / `BLOG_MAIL_TO` | 邮件 SMTP（评论通知；发件人 = `BLOG_MAIL_USERNAME`）+ 启动测试邮件收件人，五项必填，缺失启动即失败（fail fast） |
 | `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
 | `BLOG_STORAGE_PUBLIC_BASE_URL` | 对象公开直链域名（CDN），可选，留空用 endpoint |
 | `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |

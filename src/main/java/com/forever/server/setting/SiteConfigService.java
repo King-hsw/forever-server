@@ -35,11 +35,6 @@ public class SiteConfigService {
      */
     public static final String COMMENT_OWNER_EMAIL = "comment.owner-email";
     /**
-     * 通知邮件的发件人地址
-     */
-    public static final String COMMENT_FROM_EMAIL = "comment.from-email";
-
-    /**
      * 站点对外地址，用于拼接文章前台链接与 RSS
      */
     public static final String SITE_URL = "site.url";
@@ -76,7 +71,6 @@ public class SiteConfigService {
             Map.entry(COMMENT_AUTO_APPROVE, "新评论是否直接过审，false = 先审后显（true/false）"),
             Map.entry(COMMENT_NOTIFY_MAIL, "是否开启评论邮件通知（true/false）"),
             Map.entry(COMMENT_OWNER_EMAIL, "新根评论通知站长的邮箱"),
-            Map.entry(COMMENT_FROM_EMAIL, "通知邮件的发件人地址"),
             Map.entry(SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）"),
             Map.entry(SITE_NAME, "站点名称（用于 RSS 标题与邮件发件人等对外署名）"),
             Map.entry(SITE_BIRTH_DATE, "建站日期，格式 yyyy-MM-dd（前台页脚据此计算运行时长）"),
@@ -226,7 +220,7 @@ public class SiteConfigService {
                 throw new BizException(ErrorCode.BAD_REQUEST, "布尔型配置只接受 true/false");
             }
             trimmed = trimmed.toLowerCase();
-        } else if ((key.equals(COMMENT_OWNER_EMAIL) || key.equals(COMMENT_FROM_EMAIL))
+        } else if (key.equals(COMMENT_OWNER_EMAIL)
                 && !trimmed.isEmpty()
                 && !trimmed.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "邮箱格式不正确");
