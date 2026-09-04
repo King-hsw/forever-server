@@ -268,7 +268,7 @@ mvn spring-boot:run
 ## 常用开发说明
 
 - 数据库变更一律走 Flyway 迁移脚本（`src/main/resources/db/migration/`），禁止手改已合并的脚本
-- 运行参数（评论策略、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期配置（初始管理员、文件存储）
+- 运行参数（评论策略、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期配置（如初始管理员、文件存储、站点名/地址）
 - 后台新接口必须声明 `@Perm`（裸 `@Perm` = 仅需登录），否则该接口一律 403；权限码由启动扫描自动登记
 - 本地日志输出到 `logs/forever-server.log`（已在 .gitignore 中）
 - 定时任务（RSS 抓取）默认每 6 小时一次，可通过 `blog.rss.fetch-interval-ms` 等配置覆盖

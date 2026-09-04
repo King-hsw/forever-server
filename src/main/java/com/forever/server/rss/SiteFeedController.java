@@ -43,7 +43,7 @@ public class SiteFeedController {
     // /rss 为历史路径（已有订阅者指向它），/rss.xml 为 robots.txt 与常规约定使用的后缀形式
     @GetMapping(value = {"/rss", "/rss.xml"}, produces = MediaType.APPLICATION_RSS_XML_VALUE)
     public ResponseEntity<String> rss() throws com.rometools.rome.io.FeedException {
-        String siteUrl = trimTrailingSlash(this.siteUrl);
+        String siteUrl = trimTrailingSlash(this.siteUrl.strip());
 
         SyndFeed feed = new SyndFeedImpl();
         feed.setFeedType("rss_2.0");
