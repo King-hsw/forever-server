@@ -35,6 +35,9 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true
 blog:
+  mail:
+    # 启动测试邮件收件人（必填）：服务启动即发一封，验证 SMTP 链路，失败只记日志不阻塞启动
+    test-to: ${BLOG_MAIL_TO:?}
   # Web Push VAPID 密钥（私密）：三项任一缺失即推送功能关闭（/api/v1/push/vapid 与发送报 503）。
   # 生成：npx web-push generate-vapid-keys
   push:

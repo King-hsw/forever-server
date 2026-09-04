@@ -255,7 +255,7 @@ mvn spring-boot:run
 |---|---|
 | `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | 数据源 |
 | `BLOG_ADMIN_USERNAME` / `BLOG_ADMIN_PASSWORD` | 初始管理员（仅首次启动建号用）；password 必填 |
-| `BLOG_MAIL_HOST` / `BLOG_MAIL_PORT` / `BLOG_MAIL_USERNAME` / `BLOG_MAIL_PASSWORD` | 邮件 SMTP（评论通知、启动测试邮件），四项必填，缺失启动即失败（fail fast） |
+| `BLOG_MAIL_HOST` / `BLOG_MAIL_PORT` / `BLOG_MAIL_USERNAME` / `BLOG_MAIL_PASSWORD` / `BLOG_MAIL_TO` | 邮件 SMTP（评论通知）+ 启动测试邮件收件人，五项必填，缺失启动即失败（fail fast） |
 | `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
 | `BLOG_STORAGE_PUBLIC_BASE_URL` | 对象公开直链域名（CDN），可选，留空用 endpoint |
 | `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |
