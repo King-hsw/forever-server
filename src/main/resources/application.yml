@@ -6,10 +6,10 @@ spring:
     name: forever-server
   # SMTP 发信（评论通知/启动测试邮件）：BLOG_MAIL_* 必填，.env 提供，缺失即启动失败（fail fast）
   mail:
-    host: ${BLOG_MAIL_HOST:?}
-    port: ${BLOG_MAIL_PORT:?}
-    username: ${BLOG_MAIL_USERNAME:?}
-    password: ${BLOG_MAIL_PASSWORD:?}
+    host: ${BLOG_MAIL_HOST}
+    port: ${BLOG_MAIL_PORT}
+    username: ${BLOG_MAIL_USERNAME}
+    password: ${BLOG_MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -37,12 +37,12 @@ mybatis:
 blog:
   site:
     # 站点名称（邮件 From 显示名、RSS 标题等对外署名；必填）
-    name: ${BLOG_SITE_NAME:?}
+    name: ${BLOG_SITE_NAME}
   mail:
     # 启动测试邮件收件人（必填）：服务启动即发一封，验证 SMTP 链路，失败只记日志不阻塞启动
-    test-to: ${BLOG_MAIL_TO:?}
+    test-to: ${BLOG_MAIL_TO}
     # 评论通知站长收件人（必填）
-    notify-to: ${BLOG_MAIL_NOTIFY_TO:?}
+    notify-to: ${BLOG_MAIL_NOTIFY_TO}
   # Web Push VAPID 密钥（私密）：三项任一缺失即推送功能关闭（/api/v1/push/vapid 与发送报 503）。
   # 生成：npx web-push generate-vapid-keys
   push:
@@ -57,12 +57,12 @@ blog:
   # 文件存储（RustFS，S3 兼容）：缺项启动即失败（fail fast）；应用不管理桶
   storage:
     # 浏览器可达的 S3 API 地址（预签名 URL 由浏览器直连）
-    endpoint: ${BLOG_STORAGE_ENDPOINT:?}
+    endpoint: ${BLOG_STORAGE_ENDPOINT}
     # 公开直链域名（CDN），留空用 endpoint
     public-base-url: ${BLOG_STORAGE_PUBLIC_BASE_URL:}
-    access-key: ${BLOG_STORAGE_ACCESS_KEY:?}
-    secret-key: ${BLOG_STORAGE_SECRET_KEY:?}
-    bucket: ${BLOG_STORAGE_BUCKET:?}
+    access-key: ${BLOG_STORAGE_ACCESS_KEY}
+    secret-key: ${BLOG_STORAGE_SECRET_KEY}
+    bucket: ${BLOG_STORAGE_BUCKET}
     # 预签名 URL 有效期（直传 PUT 与分片共用）
     presign-ttl: ${BLOG_STORAGE_PRESIGN_TTL:15m}
   # 高德 Web Service key（动态页「获取当前位置」逆地理）；留空 = 功能关闭
