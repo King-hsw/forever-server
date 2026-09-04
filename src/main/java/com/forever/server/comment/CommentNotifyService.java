@@ -103,10 +103,6 @@ public class CommentNotifyService {
         if (to == null || to.isBlank()) {
             return; // 收件人未留邮箱（登录用户资料无邮箱），不发
         }
-        if (!mailService.configured()) {
-            log.debug("mail skipped: mail.* not configured");
-            return;
-        }
         mailService.send(to, subject, text);
     }
 }

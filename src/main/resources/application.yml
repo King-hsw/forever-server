@@ -4,6 +4,22 @@
 spring:
   application:
     name: forever-server
+  # SMTP 发信（评论通知/启动测试邮件）：BLOG_MAIL_* 必填，.env 提供，缺失即启动失败（fail fast）
+  mail:
+    host: ${BLOG_MAIL_HOST:?}
+    port: ${BLOG_MAIL_PORT:?}
+    username: ${BLOG_MAIL_USERNAME:?}
+    password: ${BLOG_MAIL_PASSWORD:?}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          ssl:
+            enable: true
+          # 防止 SMTP 不可达时启动测试邮件/评论通知长时间挂起
+          connectiontimeout: 15000
+          timeout: 15000
+          writetimeout: 15000
   # 动态媒体上传：单文件 120MB（视频 100MB 上限留余量）/ 单请求 130MB
   servlet:
     multipart:

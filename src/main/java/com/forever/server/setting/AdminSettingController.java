@@ -2,7 +2,6 @@ package com.forever.server.setting;
 
 import com.forever.server.auth.Perm;
 import com.forever.server.common.ApiResponse;
-import com.forever.server.mail.MailService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -18,7 +17,6 @@ import java.util.List;
 public class AdminSettingController {
 
     private final SiteConfigService service;
-    private final MailService mailService;
 
     @Perm("setting:list")
     @Operation(summary = "配置项列表", description = "返回全部已知配置项及当前生效值；value 为空表示尚未设置，走 yml 默认值")
@@ -33,14 +31,5 @@ public class AdminSettingController {
     public ApiResponse<SettingDtos.SettingResponse> update(
             @Valid @RequestBody SettingDtos.SettingUpdateRequest request) {
         return ApiResponse.ok(service.update(request.key(), request.value()));
-    }
-
-    @Perm("setting:update")
-    @Operation(summary = "发送测试邮件", description = "用当前 mail.* SMTP 配置向指定地址发一封测试邮件，验证账密与发件人地址可用；SMTP 未配置或发送失败返回 400")
-    @PostMapping("/mail/test")
-    public ApiResponse<Void> sendTestMail(@Valid @RequestBody SettingDtos.MailTestRequest request) {
-        mailService.send(request.to(), "博客邮件配置测试",
-                "这是来自博客后台的测试邮件，收到即说明 SMTP 配置可用。");
-        return ApiResponse.ok();
     }
 }
