@@ -147,7 +147,7 @@
 - `blog.storage.endpoint` 必须是**浏览器可达的地址**（公网域名或反代后的地址）；换地址 = 改 `BLOG_STORAGE_ENDPOINT` 环境变量并重启 + 历史直链失效需一次性迁移，这是直链模式的已知代价
 - 将来需要权限控制的文件走**独立隐私桶**（匿名不可读，读取由业务接口现签预签名 URL）
 
-**存储配置在 yml/环境变量**（`blog.storage`：`endpoint` / `public-base-url` / `access-key` / `secret-key` / `bucket` / `presign-ttl`，生产见 `application-prod.yml` 的 `BLOG_STORAGE_*` 环境变量，本地在 `local/application-local.yml`），S3 客户端随 Bean 一次性构建，改配置 = 改 env 重启。缺项或格式错误启动即失败（fail fast）；应用不对桶做任何管理操作。
+**存储配置在环境变量**（`BLOG_STORAGE_*`：`endpoint` / `public-base-url` / `access-key` / `secret-key` / `bucket` / `presign-ttl`，本地与生产同一套变量，值放各自 `.env`，见 `application.yml`），S3 客户端随 Bean 一次性构建，改配置 = 改 env 重启。缺项或格式错误启动即失败（fail fast）；应用不对桶做任何管理操作。
 
 **内容寻址（无状态，无文件表）**：对象 key = `{md5}.{ext}`（桶根直存，前端算好 md5 随申请带上）——**key 本身就是内容的指纹**，秒传查询就是对这个地址发一次 HEAD：命中即说明同内容已上传，直接返回直链。查询（check）与凭证签发（presign/init）是两个独立接口，由前端编排。文件状态（对象、分片会话）全部由 RustFS 自持，业务库不记录任何文件信息，发布时仅校验引用为合法直链。代价：无归属校验（持有直链即持有文件）、无台账，中断的分片会话与未引用对象由运营侧扫桶处置。
 
@@ -163,7 +163,7 @@
 docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 ```
 
-然后在 `local/application-local.yml` 的 `blog.storage` 填入 endpoint `http://localhost:9000`、账密 `rustfsadmin` / `rustfsadmin`、桶 `forever`（模板已预置），重启应用即生效。桶 `forever` 需自行在控制台 `http://localhost:9001` 创建并设为公开读（匿名可读），应用不再代劳。
+然后在 `.env` 填入 `BLOG_STORAGE_ENDPOINT=http://localhost:9000`、`BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY`=`rustfsadmin`、`BLOG_STORAGE_BUCKET=forever`（`.env.example` 已预置），重启应用即生效。桶 `forever` 需自行在控制台 `http://localhost:9001` 创建并设为公开读（匿名可读），应用不再代劳。
 
 > 前端直连预签名地址（跨域 XHR）时需在 RustFS 控制台为桶开启 CORS；`<img>`/`<video>` 标签加载不受影响。
 
@@ -224,19 +224,20 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 
 ## 首次启动（必读）
 
-应用启动依赖本地私密配置，**仓库中不包含**，需手动创建：
+应用启动依赖私密配置，**仓库中不包含**，需手动创建 `.env`：
 
 ```bash
 # 1. 复制模板并填入真实值
-cp local/application-local.yml.example local/application-local.yml
-# 然后编辑 local/application-local.yml：
-#   - 数据库连接账密
-#   - blog.admin.username/password（仅 sys_user 为空时用于初始化管理员）
+cp .env.example .env
+# 编辑 .env：管理员初始密码（仅 sys_user 表为空时用于建号）、
+# 数据库账密（默认 localhost:5432/forever、postgres/mysecretpassword）、
+# 本地 RustFS 存储三要素（模板已预置）
 
 # 2. 建库（Flyway 迁移会在启动时自动建表）
 createdb forever   # 或 psql: CREATE DATABASE forever;
 
-# 3. 启动
+# 3. 启动（先载入 .env 再启动）
+set -a; source .env; set +a
 mvn spring-boot:run
 ```
 
@@ -245,22 +246,21 @@ mvn spring-boot:run
 - Swagger UI：<http://localhost:8080/swagger-ui.html>
 - 健康检查：<http://localhost:8080/actuator/health>
 
-> ⚠️ `local/` 目录已被 `.gitignore` 排除，真实配置严禁以任何形式提交。
+> ⚠️ `.env` 已被 `.gitignore` 排除，真实配置严禁以任何形式提交。
 
 ## 生产部署
 
-生产环境通过环境变量覆盖配置（见 `src/main/resources/application-prod.yml`）：
+配置单一来源 `application.yml`（全部 `${ENV:默认值}`），prod profile 只关闭 Swagger（`application-prod.yml`）。环境变量由 `.env` 承载（生产 compose 自动读取，测试机 systemd `EnvironmentFile`），激活 `--spring.profiles.active=prod`：
 
 | 环境变量 | 说明 |
 |---|---|
-| `DB_URL` / `DB_USERNAME` / `DB_PASSWORD` | 数据源 |
-| `BLOG_ADMIN_PASSWORD` | 初始管理员密码（仅首次启动建号用） |
+| `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | 数据源 |
+| `BLOG_ADMIN_USERNAME` / `BLOG_ADMIN_PASSWORD` | 初始管理员（仅首次启动建号用）；password 必填 |
 | `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
 | `BLOG_STORAGE_PUBLIC_BASE_URL` | 对象公开直链域名（CDN），可选，留空用 endpoint |
 | `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |
 | `BLOG_MOMENTS_AMAP_KEY` | 高德 Web Service key（动态页「获取当前位置」逆地理），可选，留空 = 功能关闭 |
-
-激活方式：`--spring.profiles.active=prod`。
+| `PUSH_VAPID_PUBLIC_KEY` / `PUSH_VAPID_PRIVATE_KEY` / `PUSH_VAPID_SUBJECT` | Web Push VAPID，三项任一缺失 = 推送关闭 |
 
 ## 常用开发说明
 

@@ -6,7 +6,7 @@ import java.time.Duration;
 
 /**
  * 文件存储配置（RustFS，S3 兼容）：yml 是唯一来源（blog.storage.*），
- * 生产由环境变量注入（application-prod.yml），本地开发在 local/application-local.yml；
+ * 本地/生产均由环境变量注入（BLOG_STORAGE_*，值在各自 .env，见 application.yml）；
  * 启动时构建一次客户端，改配置 = 改 env 重启。
  *
  * @param endpoint   对象存储 S3 API 地址（默认端口 9000），如 https://s3.example.com；

@@ -3,7 +3,7 @@ package com.forever.server.push;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Web Push VAPID 配置：密钥对与联系人，属私密信息，实际值放 local/application-local.yml 或环境变量，
+ * Web Push VAPID 配置：密钥对与联系人，属私密信息，实际值放 .env（PUSH_VAPID_* 环境变量），
  * 不入 git。生成方式（任选其一）：
  * <ul>
  *   <li>npx web-push generate-vapid-keys</li>

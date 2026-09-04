@@ -1,33 +1,49 @@
+# 配置单一来源：全部 ${ENV:默认值}，默认值 = 本地开发可用；
+# 本地/测试/生产同一套变量名，值放各自 .env（本地：set -a; source .env 后启动；
+# 测试：systemd EnvironmentFile；生产：compose 自动读取 .env）
 spring:
   application:
     name: forever-server
-  # 本地开发私密配置（不入 git）：数据库账密、blog.* 全部在 ./local/application-local.yml
-  # 首次克隆仓库后需手动创建该文件才能启动，模板见 README 或向仓库维护者索取
-  config:
-    import:
-      - optional:file:./local/application-local.yml
   # 动态媒体上传：单文件 120MB（视频 100MB 上限留余量）/ 单请求 130MB
   servlet:
     multipart:
       max-file-size: 120MB
       max-request-size: 130MB
-
+  # 数据源：默认本地 PostgreSQL，生产/测试用 SPRING_DATASOURCE_* 环境变量覆盖
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/forever}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:mysecretpassword}
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   configuration:
     map-underscore-to-camel-case: true
-
-# Web Push VAPID 密钥（私密，不入 git）：实际值放 local/application-local.yml 或环境变量；
-# 三项任一缺失即推送功能关闭（/api/v1/push/vapid 与发送报 503）。生成：npx web-push generate-vapid-keys
 blog:
+  # Web Push VAPID 密钥（私密）：三项任一缺失即推送功能关闭（/api/v1/push/vapid 与发送报 503）。
+  # 生成：npx web-push generate-vapid-keys
   push:
     vapid:
       public-key: ${PUSH_VAPID_PUBLIC_KEY:}
       private-key: ${PUSH_VAPID_PRIVATE_KEY:}
       subject: ${PUSH_VAPID_SUBJECT:}
-
-# 日志级别与输出在 logback-spring.xml 中统一维护
-
-# 说明：blog.* 为启动期配置（admin 见 local/application-local.yml，storage 见 application-prod.yml）；
-# 评论策略、站点地址等运行参数由后台「站点设置」管理：GET/PUT /api/admin/settings，
-# 修改即时生效、重启不丢
+  # 初始管理员：仅 sys_user 表为空时用于建号，password 必填（fail fast）
+  admin:
+    username: ${BLOG_ADMIN_USERNAME:admin}
+    password: ${BLOG_ADMIN_PASSWORD}
+  # 文件存储（RustFS，S3 兼容）：缺项启动即失败（fail fast）；应用不管理桶
+  storage:
+    # 浏览器可达的 S3 API 地址（预签名 URL 由浏览器直连）
+    endpoint: ${BLOG_STORAGE_ENDPOINT:?}
+    # 公开直链域名（CDN），留空用 endpoint
+    public-base-url: ${BLOG_STORAGE_PUBLIC_BASE_URL:}
+    access-key: ${BLOG_STORAGE_ACCESS_KEY:?}
+    secret-key: ${BLOG_STORAGE_SECRET_KEY:?}
+    bucket: ${BLOG_STORAGE_BUCKET:?}
+    # 预签名 URL 有效期（直传 PUT 与分片共用）
+    presign-ttl: ${BLOG_STORAGE_PRESIGN_TTL:15m}
+  # 高德 Web Service key（动态页「获取当前位置」逆地理）；留空 = 功能关闭
+  moments:
+    amap:
+      key: ${BLOG_MOMENTS_AMAP_KEY:}
+# 说明：评论策略、站点地址等运行参数在后台「站点设置」（PUT /api/admin/settings）
+# 在线调整、即时生效，yml 不承载运行参数

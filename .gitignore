@@ -10,15 +10,12 @@ logs/
 # 设计文档仅本地保留，不入仓
 docs/
 
-# 本地私密配置（数据库账密 / JWT 密钥 / 管理员密码），严禁提交
-# 仅放行 .example 模板供新环境参考
-local/*
-!local/application-local.yml.example
+# 本地私密配置（.env：数据库账密 / 管理员密码 / 存储密钥等），严禁提交
 .env
-*.local.yml
 
 # 运行时上传目录（本地生成，不入仓）
 data/uploads/
 
 # Local dev worktrees
 .worktrees/
+.wt/

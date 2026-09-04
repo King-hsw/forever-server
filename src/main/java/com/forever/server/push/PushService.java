@@ -218,7 +218,7 @@ public class PushService {
     private void requireConfigured() {
         if (sender == null)
             throw new BizException(ErrorCode.SERVICE_UNAVAILABLE,
-                    "推送功能未配置：请在 local/application-local.yml 或环境变量设置 blog.push.vapid.*");
+                    "推送功能未配置：请在 .env 设置 PUSH_VAPID_* 环境变量（模板见 .env.example）");
     }
 
     /**

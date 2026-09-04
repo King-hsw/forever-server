@@ -1,31 +1,4 @@
-# 数据源走 compose 注入的 SPRING_DATASOURCE_URL/USERNAME/PASSWORD 环境变量（优先级高于本文件）；
-# multipart 上传上限（120MB/130MB）与日志文件路径（logs/forever-server.log，logback 内置默认值）在 base 配置/logback-spring.xml 维护
-
-blog:
-  admin:
-    username: ${BLOG_ADMIN_USERNAME:admin}
-    # 生产环境密码不落盘，由 AdminInitializer 首次启动时读取（缺失则初始化失败）
-    password: ${BLOG_ADMIN_PASSWORD}
-  # 文件存储（RustFS，S3 兼容）：endpoint 复用 S3 公网域名（预签名 URL 由浏览器直连，
-  # 故后端也走公网 endpoint 而非容器内网，见 docker-compose.yml rustfs-s3 路由注释）；
-  # 缺项启动即失败（blog.storage 由 RustFsStorageService 构造时校验）
-  storage:
-    endpoint: ${BLOG_STORAGE_ENDPOINT:?}
-    # 公开直链域名（CDN），留空用 endpoint
-    public-base-url: ${BLOG_STORAGE_PUBLIC_BASE_URL:}
-    access-key: ${BLOG_STORAGE_ACCESS_KEY:?}
-    secret-key: ${BLOG_STORAGE_SECRET_KEY:?}
-    bucket: ${BLOG_STORAGE_BUCKET:?}
-    # 预签名 URL 有效期（直传 PUT 与分片共用），默认 15m
-    presign-ttl: ${BLOG_STORAGE_PRESIGN_TTL:15m}
-  # 高德 Web Service key（动态页「获取当前位置」逆地理，见 AmapService）；
-  # 留空 = 功能关闭（逆地理静默返回 null，用户手动填写地点），故不用 :? 强制必填
-  moments:
-    amap:
-      key: ${BLOG_MOMENTS_AMAP_KEY:}
-
-# 评论策略、站点地址等运行参数在后台「站点设置」（PUT /api/admin/settings）在线调整、即时生效
-
+# 仅保留开发环境特性的生产关闭开关，其余配置与本地同一份 application.yml
 springdoc:
   api-docs:
     enabled: false
