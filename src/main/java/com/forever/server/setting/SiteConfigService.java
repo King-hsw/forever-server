@@ -27,14 +27,6 @@ public class SiteConfigService {
      */
     public static final String COMMENT_AUTO_APPROVE = "comment.auto-approve";
     /**
-     * 是否开启回复邮件通知（SMTP 在 yml spring.mail / BLOG_MAIL_* 环境变量）
-     */
-    public static final String COMMENT_NOTIFY_MAIL = "comment.notify-mail";
-    /**
-     * 新根评论通知站长的邮箱
-     */
-    public static final String COMMENT_OWNER_EMAIL = "comment.owner-email";
-    /**
      * 站点对外地址，用于拼接文章前台链接与 RSS
      */
     public static final String SITE_URL = "site.url";
@@ -65,8 +57,6 @@ public class SiteConfigService {
     private static final Map<String, String> KNOWN_KEYS = Map.ofEntries(
             Map.entry(COMMENT_POST_INTERVAL_SECONDS, "同一 IP 发表评论的最小间隔（秒），0 表示不限流"),
             Map.entry(COMMENT_AUTO_APPROVE, "新评论是否直接过审，false = 先审后显（true/false）"),
-            Map.entry(COMMENT_NOTIFY_MAIL, "是否开启评论邮件通知（true/false）"),
-            Map.entry(COMMENT_OWNER_EMAIL, "新根评论通知站长的邮箱"),
             Map.entry(SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）"),
             Map.entry(SITE_BIRTH_DATE, "建站日期，格式 yyyy-MM-dd（前台页脚据此计算运行时长）"),
             Map.entry(AI_SUMMARY_ENABLED, "AI 文章概要总开关（true/false），还需配置 ai.api-key 才生效"),
@@ -202,16 +192,12 @@ public class SiteConfigService {
             } catch (NumberFormatException e) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "配置值必须为整数");
             }
-        } else if (key.equals(COMMENT_AUTO_APPROVE) || key.equals(COMMENT_NOTIFY_MAIL)
+        } else if (key.equals(COMMENT_AUTO_APPROVE)
                 || key.equals(AI_SUMMARY_ENABLED)) {
             if (!"true".equalsIgnoreCase(trimmed) && !"false".equalsIgnoreCase(trimmed)) {
                 throw new BizException(ErrorCode.BAD_REQUEST, "布尔型配置只接受 true/false");
             }
             trimmed = trimmed.toLowerCase();
-        } else if (key.equals(COMMENT_OWNER_EMAIL)
-                && !trimmed.isEmpty()
-                && !trimmed.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "邮箱格式不正确");
         } else if (key.equals(SITE_URL) && !trimmed.isEmpty() && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "站点地址必须以 http:// 或 https:// 开头");
         } else if (key.equals(SITE_BIRTH_DATE) && !trimmed.isEmpty() && !trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {

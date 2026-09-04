@@ -101,7 +101,7 @@
 - 游客发评需昵称 + 邮箱（头像走 Gravatar）；**登录用户在动态下自动以 sys_user 资料发言，邮箱可为空**
 - 写入前敏感词替换（`sensitive` 模块，词库内存缓存即时生效，`/api/admin/sensitive-words` 维护，未配替换字默认打码 `***`）
 - 是否直接过审（`comment.auto-approve`）、同 IP 发评最小间隔（`comment.post-interval-seconds`，0 不限流）由站点设置控制，默认直接过审、间隔 10 秒
-- 落库后发布 `CommentCreatedEvent`：邮件/Web Push 通知（回复通知被回复者、新根评论通知站长，`comment.notify-mail` / `comment.owner-email` 控制）与站内消息（见 message 模块）各自订阅，**通知失败绝不影响评论**
+- 落库后发布 `CommentCreatedEvent`：邮件/Web Push 通知（常开：根/回复均通知站长（`BLOG_MAIL_NOTIFY_TO` 收件），回复另通知被回复者；评论者即站长时零通知）与站内消息（见 message 模块）各自订阅，**通知失败绝不影响评论**
 - 管理端删除评论级联删除楼内回复
 
 ## 消息中心（message）
@@ -115,7 +115,7 @@
 | `PUT /api/v1/messages/{id}/read`、`PUT /api/v1/messages/read-all` | 标记已读 |
 | `DELETE /api/v1/messages/{id}` | 删除单条（软删） |
 
-要点：`/api/v1/**` 默认放行，各端点自行校验登录态（匿名 401）；收件箱是记录，不受 `comment.notify-mail` 开关控制。
+要点：`/api/v1/**` 默认放行，各端点自行校验登录态（匿名 401）；收件箱是记录而非推送。
 
 ## 动态（moment）
 
@@ -193,7 +193,7 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 
 `GET /api/admin/settings`（`setting:list`）列出全部可调参数与中文说明，`PUT /api/admin/settings`（`setting:update`）按 key 更新（留空即清除、恢复默认值）：白名单 + 类型校验（布尔只收 true/false、邮箱/URL/日期格式、数值范围），落库 + 内存缓存双写，**即时生效、重启不丢**。SMTP 不在站点设置里，在 yml `spring.mail` / `BLOG_MAIL_*` 环境变量（见「部署」节）；发件人固定为 SMTP 登录账号（`BLOG_MAIL_USERNAME`）；**服务启动时自动向 `BLOG_MAIL_TO` 发一封测试邮件**，验证 SMTP 可用，失败只记日志不阻塞启动。参数分组：
 
-- **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）、`comment.notify-mail`（邮件通知开关）、`comment.owner-email`（新根评论通知站长的邮箱；邮件发件人固定为 SMTP 登录账号，不在站点设置里）
+- **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）；评论邮件通知常开、不走站点设置（站长收件人在 env `BLOG_MAIL_NOTIFY_TO`，见「部署」节；发件人固定为 SMTP 登录账号）
 - **站点**：`site.url`（文章前台链接与 RSS 用）、`site.birth-date`（页脚运行时长）
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 
@@ -257,6 +257,7 @@ mvn spring-boot:run
 | `BLOG_ADMIN_USERNAME` / `BLOG_ADMIN_PASSWORD` | 初始管理员（仅首次启动建号用）；password 必填 |
 | `BLOG_SITE_NAME` | 站点名称（邮件 From 显示名、RSS 标题等对外署名），必填，缺失启动即失败（fail fast） |
 | `BLOG_MAIL_HOST` / `BLOG_MAIL_PORT` / `BLOG_MAIL_USERNAME` / `BLOG_MAIL_PASSWORD` / `BLOG_MAIL_TO` | 邮件 SMTP（评论通知；发件人 = `BLOG_MAIL_USERNAME`，显示名 = `BLOG_SITE_NAME`）+ 启动测试邮件收件人，五项必填，缺失启动即失败（fail fast） |
+| `BLOG_MAIL_NOTIFY_TO` | 评论通知站长收件人（评论通知常开），必填，缺失启动即失败（fail fast） |
 | `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
 | `BLOG_STORAGE_PUBLIC_BASE_URL` | 对象公开直链域名（CDN），可选，留空用 endpoint |
 | `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |

@@ -16,7 +16,7 @@ import java.util.List;
 
 /**
  * 站内消息收件箱：订阅评论创建事件，按规则写入收件人；读删操作仅本人可见。
- * 收件箱是记录而非推送，不受 comment.notify-mail 开关控制。
+ * 收件箱是记录而非推送。
  */
 @Slf4j
 @Service
