@@ -6,7 +6,6 @@ import com.forever.server.common.Strings;
 import com.forever.server.config.BlogProperties;
 import com.forever.server.mail.MailService;
 import com.forever.server.push.PushService;
-import com.forever.server.setting.SiteConfigService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
@@ -17,7 +16,7 @@ import org.springframework.stereotype.Service;
  * 任何评论（根/回复）只要评论者不是站长收件人（blog.mail.notify-to）就通知站长；
  * 回复额外通知被回复者（其本人即站长时跳过，不重复）。
  * 邮件以 HTML（text/html，全 inline style，无外部资源）发送：主题按评论目标（文章/留言板/动态）分支，
- * 正文为 站点头部 → 来源标题 → 评论引用块 → 查看链接 → 页脚；绝对链接取 site.url，未配置时降级为无链接纯文本。
+ * 正文为 站点头部 → 来源标题 → 评论引用块 → 查看链接 → 页脚；绝对链接取 yml blog.site.url（env BLOG_SITE_URL），未配置时降级为无链接纯文本。
  * 设计原则：通知失败绝不影响评论本身——
  * 未配置 SMTP/VAPID、发送异常都只记日志。
  */
@@ -31,8 +30,8 @@ public class CommentNotifyService {
     private final BlogProperties blogProperties;
     /** 站长收件人（env BLOG_MAIL_NOTIFY_TO 必填） */
     private final String notifyTo;
-    /** 站点配置：邮件绝对链接用 site.url（可能为 null → 降级无链接） */
-    private final SiteConfigService siteConfig;
+    /** 站点对外地址（yml blog.site.url / env BLOG_SITE_URL）：邮件绝对链接，空 → 降级无链接 */
+    private final String siteUrl;
     /** 站点名（blog.site.name），邮件站点头部 */
     private final String siteName;
 
@@ -41,14 +40,14 @@ public class CommentNotifyService {
                                SysUserMapper sysUserMapper,
                                BlogProperties blogProperties,
                                @Value("${blog.mail.notify-to}") String notifyTo,
-                               SiteConfigService siteConfig,
+                               @Value("${blog.site.url:}") String siteUrl,
                                @Value("${blog.site.name}") String siteName) {
         this.mailService = mailService;
         this.pushService = pushService;
         this.sysUserMapper = sysUserMapper;
         this.blogProperties = blogProperties;
         this.notifyTo = notifyTo;
-        this.siteConfig = siteConfig;
+        this.siteUrl = siteUrl;
         this.siteName = siteName;
     }
 
@@ -65,7 +64,6 @@ public class CommentNotifyService {
         String sourceTitle = event.sourceTitle();
         String sourceUrl = event.sourceUrl();
         try {
-            String siteUrl = siteConfig.getString(SiteConfigService.SITE_URL, null);
             if (!isNotifyTo(comment.getEmail())) {
                 String summary = "《%s》收到新评论：%s：%s".formatted(
                         sourceTitle, comment.getNickname(), Strings.excerpt(comment.getContent(), 80));

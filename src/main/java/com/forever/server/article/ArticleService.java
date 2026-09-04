@@ -5,9 +5,8 @@ import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.common.PageResult;
 import com.forever.server.common.SlugGenerator;
-import com.forever.server.setting.SiteConfigService;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,14 +24,26 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ArticleService {
 
     private final ArticleMapper articleMapper;
     private final ArticleTagMapper articleTagMapper;
     private final CategoryMapper categoryMapper;
     private final com.forever.server.tag.TagMapper tagMapper;
-    private final SiteConfigService siteConfig;
+    /** 站点对外地址（yml blog.site.url / env BLOG_SITE_URL），拼接文章前台 url */
+    private final String siteUrl;
+
+    public ArticleService(ArticleMapper articleMapper,
+                          ArticleTagMapper articleTagMapper,
+                          CategoryMapper categoryMapper,
+                          com.forever.server.tag.TagMapper tagMapper,
+                          @Value("${blog.site.url:}") String siteUrl) {
+        this.articleMapper = articleMapper;
+        this.articleTagMapper = articleTagMapper;
+        this.categoryMapper = categoryMapper;
+        this.tagMapper = tagMapper;
+        this.siteUrl = siteUrl;
+    }
 
     // ---------- 管理端 ----------
 
@@ -244,10 +255,10 @@ public class ArticleService {
     }
 
     /**
-     * 前台完整 URL，供机器消费方直接使用；后台未配置站点地址时返回 null
+     * 前台完整 URL，供机器消费方直接使用；未配置 blog.site.url 时返回 null
      */
     private String publicUrl(String slug) {
-        String base = siteConfig.getString(SiteConfigService.SITE_URL, null);
+        String base = siteUrl;
         if (base == null || base.isBlank()) {
             return null;
         }

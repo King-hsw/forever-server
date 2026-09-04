@@ -2,7 +2,6 @@ package com.forever.server.rss;
 
 import com.forever.server.article.Article;
 import com.forever.server.article.ArticleMapper;
-import com.forever.server.setting.SiteConfigService;
 import com.rometools.rome.feed.synd.*;
 import com.rometools.rome.io.SyndFeedOutput;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,22 +27,23 @@ public class SiteFeedController {
     private static final int FEED_SIZE = 20;
 
     private final ArticleMapper articleMapper;
-    private final SiteConfigService siteConfig;
+    private final String siteUrl;
     private final String siteName;
 
-    public SiteFeedController(ArticleMapper articleMapper, SiteConfigService siteConfig,
+    public SiteFeedController(ArticleMapper articleMapper,
+                              @Value("${blog.site.url:}") String siteUrl,
                               @Value("${blog.site.name}") String siteName) {
         this.articleMapper = articleMapper;
-        this.siteConfig = siteConfig;
+        this.siteUrl = siteUrl;
         this.siteName = siteName;
     }
 
     @Operation(summary = "本站 RSS 订阅源", description = "RSS 2.0 格式，返回最新 20 篇已发布文章；" +
-            "文章链接基于后台站点设置 site.url 拼接")
+            "文章链接基于环境配置 blog.site.url 拼接")
     // /rss 为历史路径（已有订阅者指向它），/rss.xml 为 robots.txt 与常规约定使用的后缀形式
     @GetMapping(value = {"/rss", "/rss.xml"}, produces = MediaType.APPLICATION_RSS_XML_VALUE)
     public ResponseEntity<String> rss() throws com.rometools.rome.io.FeedException {
-        String siteUrl = trimTrailingSlash(siteConfig.getString(SiteConfigService.SITE_URL, ""));
+        String siteUrl = trimTrailingSlash(this.siteUrl);
 
         SyndFeed feed = new SyndFeedImpl();
         feed.setFeedType("rss_2.0");

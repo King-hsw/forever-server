@@ -27,10 +27,6 @@ public class SiteConfigService {
      */
     public static final String COMMENT_AUTO_APPROVE = "comment.auto-approve";
     /**
-     * 站点对外地址，用于拼接文章前台链接与 RSS
-     */
-    public static final String SITE_URL = "site.url";
-    /**
      * 建站日期（yyyy-MM-dd），前台页脚据此计算运行时长
      */
     public static final String SITE_BIRTH_DATE = "site.birth-date";
@@ -57,7 +53,6 @@ public class SiteConfigService {
     private static final Map<String, String> KNOWN_KEYS = Map.ofEntries(
             Map.entry(COMMENT_POST_INTERVAL_SECONDS, "同一 IP 发表评论的最小间隔（秒），0 表示不限流"),
             Map.entry(COMMENT_AUTO_APPROVE, "新评论是否直接过审，false = 先审后显（true/false）"),
-            Map.entry(SITE_URL, "站点对外地址，如 https://blog.example.com（用于文章前台链接与 RSS）"),
             Map.entry(SITE_BIRTH_DATE, "建站日期，格式 yyyy-MM-dd（前台页脚据此计算运行时长）"),
             Map.entry(AI_SUMMARY_ENABLED, "AI 文章概要总开关（true/false），还需配置 ai.api-key 才生效"),
             Map.entry(AI_API_KEY, "AI 服务的 API Key（OpenAI 兼容接口）"),
@@ -198,8 +193,6 @@ public class SiteConfigService {
                 throw new BizException(ErrorCode.BAD_REQUEST, "布尔型配置只接受 true/false");
             }
             trimmed = trimmed.toLowerCase();
-        } else if (key.equals(SITE_URL) && !trimmed.isEmpty() && !trimmed.startsWith("http://") && !trimmed.startsWith("https://")) {
-            throw new BizException(ErrorCode.BAD_REQUEST, "站点地址必须以 http:// 或 https:// 开头");
         } else if (key.equals(SITE_BIRTH_DATE) && !trimmed.isEmpty() && !trimmed.matches("\\d{4}-\\d{2}-\\d{2}")) {
             throw new BizException(ErrorCode.BAD_REQUEST, "建站日期格式必须为 yyyy-MM-dd");
         }

@@ -38,6 +38,8 @@ blog:
   site:
     # 站点名称（邮件 From 显示名、RSS 标题等对外署名；必填）
     name: ${BLOG_SITE_NAME}
+    # 站点对外地址（邮件绝对链接、RSS、文章 url 字段）；留空 = 邮件降级无链接、文章 url 为 null
+    url: ${BLOG_SITE_URL:}
   mail:
     # 启动测试邮件收件人（必填）：服务启动即发一封，验证 SMTP 链路，失败只记日志不阻塞启动
     test-to: ${BLOG_MAIL_TO}
@@ -69,5 +71,5 @@ blog:
   moments:
     amap:
       key: ${BLOG_MOMENTS_AMAP_KEY:}
-# 说明：评论策略、站点地址等运行参数在后台「站点设置」（PUT /api/admin/settings）
+# 说明：评论策略等运行参数在后台「站点设置」（PUT /api/admin/settings）
 # 在线调整、即时生效，yml 不承载运行参数

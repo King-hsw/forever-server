@@ -74,7 +74,7 @@
 
 - 草稿/发布两态 + 软删除（关联与数据保留）；slug 全局唯一，未指定时从标题提取语义化 slug（英文数字词段，SEO 友好），冲突追加随机后缀重试
 - `type=ARTICLE` 博文 / `type=PAGE` 独立页面（如「关于」）；正文带 `content_format`（MARKDOWN/HTML），服务端只存取不渲染
-- 机器友好 API：响应含 `url`（按站点设置 `site.url` 拼接的前台链接）与 `readingTime`（预估阅读时长）
+- 机器友好 API：响应含 `url`（按 env `BLOG_SITE_URL` / yml `blog.site.url` 拼接的前台链接，未配置时为 null）与 `readingTime`（预估阅读时长）
 - 标签多对多随文章保存整体重建；分类/标签引用在写入前校验
 - AI 概要调 OpenAI 兼容接口（配置在站点设置，正文超 8000 字截断），生成结果写回 `article.summary`
 
@@ -194,7 +194,7 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 `GET /api/admin/settings`（`setting:list`）列出全部可调参数与中文说明，`PUT /api/admin/settings`（`setting:update`）按 key 更新（留空即清除、恢复默认值）：白名单 + 类型校验（布尔只收 true/false、邮箱/URL/日期格式、数值范围），落库 + 内存缓存双写，**即时生效、重启不丢**。SMTP 不在站点设置里，在 yml `spring.mail` / `BLOG_MAIL_*` 环境变量（见「部署」节）；发件人固定为 SMTP 登录账号（`BLOG_MAIL_USERNAME`）；**服务启动时自动向 `BLOG_MAIL_TO` 发一封测试邮件**，验证 SMTP 可用，失败只记日志不阻塞启动。参数分组：
 
 - **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）；评论邮件通知常开、不走站点设置（站长收件人在 env `BLOG_MAIL_NOTIFY_TO`，见「部署」节；发件人固定为 SMTP 登录账号）
-- **站点**：`site.url`（文章前台链接与 RSS 用）、`site.birth-date`（页脚运行时长）
+- **站点**：`site.birth-date`（页脚运行时长）
 - **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 
 > 密钥类配置（ai.api-key）的更新日志自动脱敏为 `***`，不会明文写入日志文件。邮件 SMTP（`BLOG_MAIL_*`）与文件存储（storage）不在站点设置里，配置见 yml/环境变量。
@@ -256,6 +256,7 @@ mvn spring-boot:run
 | `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` | 数据源 |
 | `BLOG_ADMIN_USERNAME` / `BLOG_ADMIN_PASSWORD` | 初始管理员（仅首次启动建号用）；password 必填 |
 | `BLOG_SITE_NAME` | 站点名称（邮件 From 显示名、RSS 标题等对外署名），必填，缺失启动即失败（fail fast） |
+| `BLOG_SITE_URL` | 站点对外地址（邮件绝对链接、RSS、文章 url 字段），可选，留空 = 邮件降级无链接、文章 url 为 null |
 | `BLOG_MAIL_HOST` / `BLOG_MAIL_PORT` / `BLOG_MAIL_USERNAME` / `BLOG_MAIL_PASSWORD` / `BLOG_MAIL_TO` | 邮件 SMTP（评论通知；发件人 = `BLOG_MAIL_USERNAME`，显示名 = `BLOG_SITE_NAME`）+ 启动测试邮件收件人，五项必填，缺失启动即失败（fail fast） |
 | `BLOG_MAIL_NOTIFY_TO` | 评论通知站长收件人（评论通知常开），必填，缺失启动即失败（fail fast） |
 | `BLOG_STORAGE_ENDPOINT` / `BLOG_STORAGE_ACCESS_KEY` / `BLOG_STORAGE_SECRET_KEY` / `BLOG_STORAGE_BUCKET` | 文件存储（RustFS S3 兼容），必填；endpoint 为浏览器可达的 S3 公网地址 |
@@ -267,7 +268,7 @@ mvn spring-boot:run
 ## 常用开发说明
 
 - 数据库变更一律走 Flyway 迁移脚本（`src/main/resources/db/migration/`），禁止手改已合并的脚本
-- 运行参数（评论策略、站点地址、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期配置（初始管理员、文件存储）
+- 运行参数（评论策略、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期配置（初始管理员、文件存储）
 - 后台新接口必须声明 `@Perm`（裸 `@Perm` = 仅需登录），否则该接口一律 403；权限码由启动扫描自动登记
 - 本地日志输出到 `logs/forever-server.log`（已在 .gitignore 中）
 - 定时任务（RSS 抓取）默认每 6 小时一次，可通过 `blog.rss.fetch-interval-ms` 等配置覆盖
