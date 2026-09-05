@@ -21,7 +21,9 @@ main:
             java -Djarmode=tools -jar target/forever-server-*.jar extract --layers --launcher --destination extracted
         - name: docker build
           script:
-            - docker build -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} .
+            - docker build -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest .
         - name: docker push
           script:
             - docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT}
+            # 生产 compose 拉 :latest；仅 main 附 latest，其他分支不覆盖
+            - if [ "${CNB_BRANCH}" = "main" ]; then docker push ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:latest; fi
