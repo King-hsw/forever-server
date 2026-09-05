@@ -32,8 +32,8 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      # Dockerfile 只拷 jar（构建阶段已移出镜像）：每个平台 job 先 mvn 打包，
-      # jar 落在工作区即进入 buildx 构建上下文
+      # Dockerfile 只拷分层产物（构建阶段已移出镜像）：每个平台 job 先 mvn 打包
+      # + 分层展开，产物落在工作区即进入 buildx 构建上下文
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -43,6 +43,10 @@ jobs:
 
       - name: mvn package
         run: mvn -B package -DskipTests
+
+      # 与 .cnb.yml 同款：Dockerfile 按层 COPY extracted/（见其中注释）
+      - name: extract layers
+        run: java -Djarmode=tools -jar target/forever-server-*.jar extract --layers --launcher --destination extracted
 
       - uses: docker/setup-buildx-action@v3
 

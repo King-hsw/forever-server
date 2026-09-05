@@ -16,6 +16,9 @@ main:
         - name: mvn package
           script: |
             mvn -B package -DskipTests
+        - name: 分层展开（Dockerfile 按层 COPY extracted/，见其中注释）
+          script: |
+            java -Djarmode=tools -jar target/forever-server-*.jar extract --layers --launcher --destination extracted
         - name: docker build
           script:
             - docker build -t ${CNB_DOCKER_REGISTRY}/${CNB_REPO_SLUG_LOWERCASE}:${CNB_COMMIT} .

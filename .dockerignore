@@ -12,3 +12,6 @@ docs
 README.md
 .dockerignore
 Dockerfile
+
+# jar 不进镜像（Dockerfile 拷的是 CI 分层展开的 extracted/）
+target
