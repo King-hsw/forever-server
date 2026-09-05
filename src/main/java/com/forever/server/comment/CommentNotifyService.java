@@ -1,33 +1,25 @@
 package com.forever.server.comment;
 
-import com.forever.server.auth.SysUser;
-import com.forever.server.auth.SysUserMapper;
-import com.forever.server.common.Strings;
-import com.forever.server.config.BlogProperties;
 import com.forever.server.mail.MailService;
-import com.forever.server.push.PushService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 /**
- * 评论通知：邮件与 Web Push 双通道，通知常开（无开关）：
+ * 评论通知：仅邮件通道，通知常开（无开关）：
  * 任何评论（根/回复）只要评论者不是站长收件人（blog.mail.notify-to）就通知站长；
  * 回复额外通知被回复者（其本人即站长时跳过，不重复）。
  * 邮件以 HTML（text/html，全 inline style，无外部资源）发送：主题按评论目标（文章/留言板/动态）分支，
  * 正文为 站点头部 → 来源标题 → 评论引用块 → 查看链接 → 页脚；绝对链接取 yml blog.site.url（env BLOG_SITE_URL），未配置时降级为无链接纯文本。
  * 设计原则：通知失败绝不影响评论本身——
- * 未配置 SMTP/VAPID、发送异常都只记日志。
+ * 未配置 SMTP、发送异常都只记日志。
  */
 @Slf4j
 @Service
 public class CommentNotifyService {
 
     private final MailService mailService;
-    private final PushService pushService;
-    private final SysUserMapper sysUserMapper;
-    private final BlogProperties blogProperties;
     /** 站长收件人（env BLOG_MAIL_NOTIFY_TO 必填） */
     private final String notifyTo;
     /** 站点对外地址（yml blog.site.url / env BLOG_SITE_URL）：邮件绝对链接，空 → 降级无链接 */
@@ -36,26 +28,20 @@ public class CommentNotifyService {
     private final String siteName;
 
     public CommentNotifyService(MailService mailService,
-                               PushService pushService,
-                               SysUserMapper sysUserMapper,
-                               BlogProperties blogProperties,
                                @Value("${blog.mail.notify-to}") String notifyTo,
                                @Value("${blog.site.url:}") String siteUrl,
                                @Value("${blog.site.name}") String siteName) {
         this.mailService = mailService;
-        this.pushService = pushService;
-        this.sysUserMapper = sysUserMapper;
-        this.blogProperties = blogProperties;
         this.notifyTo = notifyTo;
         this.siteUrl = siteUrl;
         this.siteName = siteName;
     }
 
     /**
-     * 评论落库后的通知（邮件 + Web Push）：
-     * - 根评论/回复 -> 站长（notify-to 收件；推送按站长账号名下的订阅），评论者即站长时零通知
-     * - 回复额外 -> 被回复者（邮件按其邮箱；推送命中以该邮箱绑定的订阅），被回复者即站长时跳过
-     * - 邮件主题按评论目标（文章/留言板/动态）分支，正文 HTML；推送文案与旧版保持一致
+     * 评论落库后的通知（邮件）：
+     * - 根评论/回复 -> 站长（notify-to 收件），评论者即站长时零通知
+     * - 回复额外 -> 被回复者（邮件按其邮箱），被回复者即站长时跳过
+     * - 邮件主题按评论目标（文章/留言板/动态）分支，正文 HTML
      */
     @EventListener
     public void onCommentCreated(CommentCreatedEvent event) {
@@ -65,39 +51,19 @@ public class CommentNotifyService {
         String sourceUrl = event.sourceUrl();
         try {
             if (!isNotifyTo(comment.getEmail())) {
-                String summary = "《%s》收到新评论：%s：%s".formatted(
-                        sourceTitle, comment.getNickname(), Strings.excerpt(comment.getContent(), 80));
                 send(notifyTo, newCommentSubject(comment.getTargetType(), sourceTitle),
                         buildNewCommentHtml(siteName, sourceTitle, sourceUrl, siteUrl,
                                 comment.getNickname(), comment.getContent()));
-                Long ownerUid = ownerUid();
-                if (ownerUid != null) {
-                    pushService.sendToUser(ownerUid, "博客有新的评论", summary, sourceUrl);
-                }
             }
             if (parent != null && !isNotifyTo(parent.getEmail())) {
-                String summary = "你在《%s》下的评论收到了 %s 的回复：%s".formatted(
-                        sourceTitle, comment.getNickname(), Strings.excerpt(comment.getContent(), 80));
                 send(parent.getEmail(), replySubject(comment.getTargetType()),
                         buildReplyHtml(siteName, sourceTitle, sourceUrl, siteUrl,
                                 parent.getNickname(), parent.getContent(),
                                 comment.getNickname(), comment.getContent()));
-                pushService.sendToEmail(parent.getEmail(), "你的评论收到了新回复", summary, sourceUrl);
             }
         } catch (Exception e) {
             log.warn("comment notify failed: commentId={}, reason={}", comment.getId(), e.getMessage());
         }
-    }
-
-    /**
-     * 站长账号 uid（按启动配置的管理员用户名查）；配置缺失或账号不存在返回 null，推送自然跳过
-     */
-    private Long ownerUid() {
-        if (blogProperties.admin() == null || blogProperties.admin().username() == null) {
-            return null;
-        }
-        SysUser owner = sysUserMapper.findByUsername(blogProperties.admin().username());
-        return owner == null ? null : owner.getId();
     }
 
     /**

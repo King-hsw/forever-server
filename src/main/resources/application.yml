@@ -45,13 +45,6 @@ blog:
     test-to: ${BLOG_MAIL_TO}
     # 评论通知站长收件人（必填）
     notify-to: ${BLOG_MAIL_NOTIFY_TO}
-  # Web Push VAPID 密钥（私密）：三项任一缺失即推送功能关闭（/api/v1/push/vapid 与发送报 503）。
-  # 生成：npx web-push generate-vapid-keys
-  push:
-    vapid:
-      public-key: ${PUSH_VAPID_PUBLIC_KEY:}
-      private-key: ${PUSH_VAPID_PRIVATE_KEY:}
-      subject: ${PUSH_VAPID_SUBJECT:}
   # 初始管理员：仅 sys_user 表为空时用于建号，password 必填（fail fast）
   admin:
     username: ${BLOG_ADMIN_USERNAME:admin}
