@@ -1,19 +1,17 @@
 package com.forever.server.article;
 
+import com.forever.server.ai.AiClient;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
 import com.forever.server.setting.SiteConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.ai.chat.prompt.Prompt;
-import org.springframework.ai.openai.OpenAiChatModel;
-import org.springframework.ai.openai.OpenAiChatOptions;
 import org.springframework.stereotype.Service;
 
 /**
- * AI 文章概要：调 OpenAI 兼容接口为文章正文生成摘要，写入 article.summary。
+ * AI 文章概要：为文章正文生成摘要，写入 article.summary。
  * 配置（开关/Key/地址/模型）全部来自后台站点设置，运行时修改即时生效；
- * 未开启或未配置 Key 时功能不可用。每次调用按当前配置构建客户端。
+ * 未开启或未配置 Key 时功能不可用。大模型调用由 {@link AiClient} 负责。
  */
 @Slf4j
 @Service
@@ -37,6 +35,7 @@ public class AiSummaryService {
 
     private final ArticleMapper articleMapper;
     private final SiteConfigService siteConfig;
+    private final AiClient aiClient;
 
     /**
      * 生成概要并保存，返回新概要文本
@@ -55,28 +54,10 @@ public class AiSummaryService {
             content = content.substring(0, MAX_CONTENT_CHARS);
         }
 
-        String summary = callModel(siteConfig, article.getTitle(), content);
+        String prompt = INSTRUCTION.formatted(article.getTitle(), content);
+        String summary = aiClient.chat(prompt);
         articleMapper.updateSummary(articleId, summary);
         log.info("ai summary generated: id={}, chars={}", articleId, summary.length());
         return summary;
-    }
-
-    private String callModel(SiteConfigService cfg, String title, String content) {
-        try {
-            // baseUrl/apiKey 必须写在 options 上：OpenAiChatModel 按 options 构建同步+异步客户端，
-            // 只塞自建 client 时 options 缺 apiKey 会在 build() 抛 credential 缺失
-            OpenAiChatModel model = OpenAiChatModel.builder()
-                    .options(OpenAiChatOptions.builder()
-                            .baseUrl(cfg.aiBaseUrl())
-                            .apiKey(cfg.aiApiKey())
-                            .model(cfg.aiModel())
-                            .build())
-                    .build();
-            return model.call(new Prompt(INSTRUCTION.formatted(title, content)))
-                    .getResult().getOutput().getText().trim();
-        } catch (Exception e) {
-            log.error("ai summary call failed", e);
-            throw new BizException(ErrorCode.INTERNAL_ERROR, "AI 概要生成失败：" + e.getMessage());
-        }
     }
 }
