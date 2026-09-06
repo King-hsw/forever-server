@@ -30,6 +30,15 @@ spring:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/forever}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}
     password: ${SPRING_DATASOURCE_PASSWORD:mysecretpassword}
+  # AI 概要：OpenAI 兼容接口（starter 自动装配 OpenAiChatModel Bean）；API Key 留空 = 功能关闭
+  ai:
+    openai:
+      # 不含 /v1 后缀，Spring AI 自动补 /v1/chat/completions
+      base-url: ${SPRING_AI_OPENAI_BASE_URL:https://api.openai.com}
+      api-key: ${SPRING_AI_OPENAI_API_KEY:}
+      chat:
+        options:
+          model: ${SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL:gpt-4o-mini}
 mybatis:
   mapper-locations: classpath:mapper/*.xml
   configuration:

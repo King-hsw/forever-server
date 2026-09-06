@@ -118,11 +118,15 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- AI 概要：只用核心包手动构建，不走 starter 自动装配——
-             API Key 存 sys_site_config 由后台运行时配置，未配置即功能关闭，启动不依赖 -->
+        <!-- AI 概要：starter 自动装配 spring.ai.openai.*（yml/env）；
+             API Key 留空时 starter 不建 Bean，未配置即功能关闭，启动不依赖 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>
             <artifactId>spring-ai-openai</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-model-openai</artifactId>
         </dependency>
     </dependencies>
 

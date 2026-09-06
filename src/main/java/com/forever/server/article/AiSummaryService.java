@@ -3,15 +3,13 @@ package com.forever.server.article;
 import com.forever.server.ai.AiClient;
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
-import com.forever.server.setting.SiteConfigService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
  * AI 文章概要：为文章正文生成摘要，写入 article.summary。
- * 配置（开关/Key/地址/模型）全部来自后台站点设置，运行时修改即时生效；
- * 未开启或未配置 Key 时功能不可用。大模型调用由 {@link AiClient} 负责。
+ * 大模型调用由 {@link AiClient} 负责；API Key 未配置（yml/env）时其业务异常自然传播。
  */
 @Slf4j
 @Service
@@ -34,16 +32,12 @@ public class AiSummaryService {
             """;
 
     private final ArticleMapper articleMapper;
-    private final SiteConfigService siteConfig;
     private final AiClient aiClient;
 
     /**
      * 生成概要并保存，返回新概要文本
      */
     public String generate(Long articleId) {
-        if (!siteConfig.aiSummaryEnabled()) {
-            throw new BizException(ErrorCode.CONFLICT, "AI 概要功能未开启或未配置 API Key");
-        }
         Article article = articleMapper.findById(articleId);
         if (article == null) {
             throw new BizException(ErrorCode.NOT_FOUND, "文章不存在");
