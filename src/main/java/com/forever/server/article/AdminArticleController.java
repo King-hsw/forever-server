@@ -81,7 +81,7 @@ public class AdminArticleController {
     }
 
     @Perm("article:ai-summary")
-    @Operation(summary = "AI 生成概要", description = "调大模型为文章正文生成中文摘要并写入 summary；需在站点设置中开启 ai.summary-enabled 并配置 ai.api-key")
+    @Operation(summary = "AI 生成概要", description = "调大模型为文章正文生成中文摘要并写入 summary；API Key 未配置（SPRING_AI_OPENAI_API_KEY）时报「未配置」")
     @PostMapping("/{id}/ai-summary")
     public ApiResponse<ArticleResponse> aiSummary(@PathVariable Long id) {
         String summary = aiSummaryService.generate(id);

@@ -195,9 +195,8 @@ docker run -d --name rustfs -p 9000:9000 -p 9001:9001 rustfs/rustfs:latest
 
 - **评论**：`comment.post-interval-seconds`（同 IP 发评间隔）、`comment.auto-approve`（直接过审）；评论邮件通知常开、不走站点设置（站长收件人在 env `BLOG_MAIL_NOTIFY_TO`，见「部署」节；发件人固定为 SMTP 登录账号）
 - **站点**：`site.birth-date`（页脚运行时长）
-- **AI 概要**：`ai.summary-enabled`、`ai.api-key`、`ai.base-url`、`ai.model`
 
-> 密钥类配置（ai.api-key）的更新日志自动脱敏为 `***`，不会明文写入日志文件。邮件 SMTP（`BLOG_MAIL_*`）与文件存储（storage）不在站点设置里，配置见 yml/环境变量。
+> 邮件 SMTP（`BLOG_MAIL_*`）、文件存储（storage）与 AI 概要（`SPRING_AI_OPENAI_*`）不在站点设置里，配置见 yml/环境变量。
 
 ## 审计日志（actionlog）
 
@@ -264,11 +263,12 @@ mvn spring-boot:run
 | `BLOG_STORAGE_PRESIGN_TTL` | 预签名 URL 有效期，可选，默认 `15m` |
 | `BLOG_MOMENTS_AMAP_KEY` | 高德 Web Service key（动态页「获取当前位置」逆地理），可选，留空 = 功能关闭 |
 | `PUSH_VAPID_PUBLIC_KEY` / `PUSH_VAPID_PRIVATE_KEY` / `PUSH_VAPID_SUBJECT` | Web Push VAPID，三项任一缺失 = 推送关闭 |
+| `SPRING_AI_OPENAI_API_KEY` / `SPRING_AI_OPENAI_BASE_URL` / `SPRING_AI_OPENAI_CHAT_OPTIONS_MODEL` | AI 概要（OpenAI 兼容接口），API Key 可选，留空 = 功能关闭；base-url 默认 `https://api.openai.com/v1`（原样使用，需自带 /v1），model 默认 `gpt-4o-mini` |
 
 ## 常用开发说明
 
 - 数据库变更一律走 Flyway 迁移脚本（`src/main/resources/db/migration/`），禁止手改已合并的脚本
-- 运行参数（评论策略、AI 等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期配置（如初始管理员、文件存储、站点名/地址）
+- 运行参数（评论策略等）一律走后台「站点设置」，yml 不承载运行参数；`blog.*` 仅保留启动期配置（如初始管理员、文件存储、站点名/地址）
 - 后台新接口必须声明 `@Perm`（裸 `@Perm` = 仅需登录），否则该接口一律 403；权限码由启动扫描自动登记
 - 本地日志输出到 `logs/forever-server.log`（已在 .gitignore 中）
 - 定时任务（RSS 抓取）默认每 6 小时一次，可通过 `blog.rss.fetch-interval-ms` 等配置覆盖
