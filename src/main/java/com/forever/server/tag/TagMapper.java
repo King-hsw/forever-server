@@ -17,6 +17,8 @@ public interface TagMapper {
 
     Tag findById(Long id);
 
+    Tag findByIdName(String name);
+
     long countByName(String name);
 
     /**

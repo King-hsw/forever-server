@@ -2,6 +2,7 @@ package com.forever.server.tag;
 
 import com.forever.server.common.BizException;
 import com.forever.server.common.ErrorCode;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,7 +31,15 @@ public class TagService {
         checkNameUnique(request.name(), null);
         Tag tag = new Tag();
         tag.setName(request.name());
-        tagMapper.insert(tag);
+        try {
+            tagMapper.insert(tag);
+        } catch (DataIntegrityViolationException e) {
+            // check-then-act 竞态：另一并发请求已先插入，唯一索引是事实来源，幂等返回已存在行
+            Tag existing = tagMapper.findByIdName(request.name());
+            if (existing == null) throw e;
+            log.info("tag create raced, returning existing: id={}, name={}", existing.getId(), existing.getName());
+            return new TagResponse(existing.getId(), existing.getName(), 0);
+        }
         log.info("tag created: id={}, name={}", tag.getId(), tag.getName());
         return new TagResponse(tag.getId(), tag.getName(), 0);
     }
